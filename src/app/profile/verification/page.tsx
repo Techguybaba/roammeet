@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 export default function VerificationPage() {
-  const { currentUser, submitKYC, kycQueue } = useApp();
+  const { currentUser, openAuthModal, submitKYC, kycQueue } = useApp();
 
   const [docType, setDocType] = useState<"passport" | "aadhaar" | "driving_license" | "national_id">("passport");
   const [docNumber, setDocNumber] = useState("");
@@ -22,8 +22,31 @@ export default function VerificationPage() {
   const [idPhotoUrl, setIdPhotoUrl] = useState(
     "https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80"
   );
-  const [selfieUrl, setSelfieUrl] = useState(currentUser.avatar);
+  const [selfieUrl, setSelfieUrl] = useState(currentUser?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80");
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
+
+  // If not logged in, prompt user to sign in
+  if (!currentUser) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16 text-center space-y-4">
+        <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+          <ShieldCheck className="w-8 h-8" />
+        </div>
+        <h2 className="text-2xl font-black text-slate-900">Sign In to View Trust & KYC Status</h2>
+        <p className="text-sm text-slate-500 max-w-md mx-auto">
+          To protect hosts and travelers from fraud, members submit identity verification once signed in.
+        </p>
+        <div className="pt-2">
+          <button
+            onClick={() => openAuthModal("Sign in to access your trust and verification roadmap")}
+            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md shadow-indigo-200 transition-all"
+          >
+            Sign In / Create Account
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Check if current user has a pending KYC submission in the queue
   const myPendingKyc = kycQueue.find(k => k.userId === currentUser.id && k.status === "pending");
@@ -39,7 +62,6 @@ export default function VerificationPage() {
       idPhotoUrl,
       selfieUrl
     });
-
     setSubmittedSuccess(true);
   };
 

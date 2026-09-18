@@ -19,7 +19,7 @@ import {
 
 export default function CreateListingPage() {
   const router = useRouter();
-  const { addListing, currency, currencySymbol } = useApp();
+  const { addListing, currentUser, openAuthModal, currency, currencySymbol } = useApp();
 
   // Form State
   const [category, setCategory] = useState<ListingCategory>("stay");
@@ -50,6 +50,11 @@ export default function CreateListingPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!currentUser) {
+      openAuthModal("Sign in or create a Host account to publish your experience.");
+      return;
+    }
 
     const amenities = amenitiesInput.split(",").map(s => s.trim()).filter(Boolean);
     const rules = rulesInput.split(",").map(s => s.trim()).filter(Boolean);

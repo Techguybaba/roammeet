@@ -22,7 +22,8 @@ export default function MessagesPage() {
     setActiveConversationId, 
     messages, 
     sendMessage, 
-    currentUser 
+    currentUser,
+    openAuthModal 
   } = useApp();
 
   const [inputMsg, setInputMsg] = useState("");
@@ -54,6 +55,10 @@ export default function MessagesPage() {
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) {
+      openAuthModal("Sign in to send secure, protected messages.");
+      return;
+    }
     if (!inputMsg.trim() || !activeConv) return;
 
     const result = sendMessage(activeConv.id, inputMsg);
@@ -249,7 +254,7 @@ export default function MessagesPage() {
 
               {/* Messages list */}
               {activeThread.map((msg) => {
-                const isMe = msg.senderId === currentUser.id;
+                const isMe = currentUser ? msg.senderId === currentUser.id : false;
 
                 return (
                   <div

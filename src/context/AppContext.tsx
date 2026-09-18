@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { 
   User, 
   Listing, 
@@ -19,9 +19,19 @@ import {
 } from "@/lib/mock-data";
 import { inspectAndSanitizeMessage } from "@/lib/anti-bypass";
 import { SITE_CONFIG } from "@/config/site";
+import { supabase, signOutUser, fetchProfileFromCloud } from "@/lib/supabase";
+import { AuthModal } from "@/components/auth/AuthModal";
 
 interface AppContextType {
-  currentUser: User;
+  currentUser: User | null;
+  isAuthenticated: boolean;
+  isAuthModalOpen: boolean;
+  authModalReason?: string;
+  openAuthModal: (reason?: string) => void;
+  closeAuthModal: () => void;
+  setRealUser: (user: User | null) => void;
+  loginAsDemoUser: () => void;
+  logout: () => Promise<void>;
   activeRole: "traveler" | "host";
   toggleRole: () => void;
   currency: "USD" | "INR";
@@ -53,7 +63,11 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User>(CURRENT_USER);
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalReason, setAuthModalReason] = useState<string | undefined>(undefined);
+
   const [activeRole, setActiveRole] = useState<"traveler" | "host">("traveler");
   const [currency, setCurrencyState] = useState<"USD" | "INR">("USD");
   const [listings, setListings] = useState<Listing[]>(INITIAL_LISTINGS);
@@ -128,7 +142,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       status: "pending",
       dates: "Sep 22 - Sep 25, 2026 (3 nights)",
       totalAmount: 135,
-      platformFee: 1.00, // Flat $1 micro fee
+      platformFee: 1.00,
       message: "Looking forward to working remotely from Venice Beach!",
       createdAt: "1 hour ago",
       contactUnlocked: false
@@ -137,6 +151,99 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [kycQueue, setKycQueue] = useState<KYCSubmission[]>(INITIAL_KYC_QUEUE);
   const [flaggedMessages, setFlaggedMessages] = useState<FlaggedMessageRecord[]>(INITIAL_FLAGGED_MESSAGES);
+
+  // Supabase Auth Session Sync
+  useEffect(() => {
+    if (!supabase) return;
+
+    // Check existing cloud session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const cloudProfile = await fetchProfileFromCloud(session.user.id);
+        if (cloudProfile) {
+          setCurrentUser(cloudProfile);
+        } else {
+          setCurrentUser({
+            id: session.user.id,
+            name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "Traveler",
+            email: session.user.email || "",
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(session.user.email || "user")}`,
+            bio: "New member on RoamMeet.",
+            city: "Global Citizen",
+            country: "Worldwide",
+            isHost: false,
+            verificationTier: 1,
+            verificationBadge: "Email Verified",
+            phoneVerified: false,
+            selfieVerified: false,
+            idVerified: false,
+            rating: 5.0,
+            reviewCount: 0,
+            joinedDate: "Today"
+          });
+        }
+      }
+    });
+
+    // Listen for real-time auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const cloudProfile = await fetchProfileFromCloud(session.user.id);
+        if (cloudProfile) {
+          setCurrentUser(cloudProfile);
+        } else {
+          setCurrentUser({
+            id: session.user.id,
+            name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "Traveler",
+            email: session.user.email || "",
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(session.user.email || "user")}`,
+            bio: "New member on RoamMeet.",
+            city: "Global Citizen",
+            country: "Worldwide",
+            isHost: false,
+            verificationTier: 1,
+            verificationBadge: "Email Verified",
+            phoneVerified: false,
+            selfieVerified: false,
+            idVerified: false,
+            rating: 5.0,
+            reviewCount: 0,
+            joinedDate: "Today"
+          });
+        }
+      } else if (event === "SIGNED_OUT") {
+        setCurrentUser(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const openAuthModal = (reason?: string) => {
+    setAuthModalReason(reason);
+    setIsAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => {
+    setIsAuthModalOpen(false);
+  };
+
+  const setRealUser = (user: User | null) => {
+    setCurrentUser(user);
+  };
+
+  const loginAsDemoUser = () => {
+    setCurrentUser(CURRENT_USER);
+  };
+
+  const logout = async () => {
+    if (supabase) {
+      await signOutUser();
+    }
+    setCurrentUser(null);
+  };
 
   const toggleRole = () => {
     setActiveRole(prev => (prev === "traveler" ? "host" : "traveler"));
@@ -149,11 +256,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const currencySymbol = currency === "USD" ? "$" : "₹";
 
   const addListing = (data: Omit<Listing, "id" | "hostId" | "host" | "currentParticipants" | "status">) => {
+    const hostUser = currentUser || CURRENT_USER;
     const newListing: Listing = {
       ...data,
       id: `listing-${Date.now()}`,
-      hostId: currentUser.id,
-      host: currentUser,
+      hostId: hostUser.id,
+      host: hostUser,
       currentParticipants: 0,
       status: "active",
       platformFee: data.category === "travel_buddy" ? 0 : (currency === "USD" ? 1.00 : 79.00)
@@ -163,18 +271,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const sendMessage = (conversationId: string, text: string) => {
-    // Run text through Anti-Bypass Security Engine
+    const sender = currentUser || CURRENT_USER;
     const check = inspectAndSanitizeMessage(text);
-
     const activeConv = conversations.find(c => c.id === conversationId);
     const receiverId = activeConv?.otherUser.id || "unknown";
 
     const newMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
       conversationId,
-      senderId: currentUser.id,
-      senderName: currentUser.name,
-      senderAvatar: currentUser.avatar,
+      senderId: sender.id,
+      senderName: sender.name,
+      senderAvatar: sender.avatar,
       receiverId,
       text: check.sanitizedText,
       isMasked: check.hasViolation,
@@ -187,18 +294,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       [conversationId]: [...(prev[conversationId] || []), newMessage]
     }));
 
-    // Update conversation lastMessage
     setConversations(prev =>
       prev.map(c =>
         c.id === conversationId ? { ...c, lastMessage: newMessage } : c
       )
     );
 
-    // If violation detected, log into Admin Flagged Messages Audit
     if (check.hasViolation) {
       const newFlag: FlaggedMessageRecord = {
         id: `flag-${Date.now()}`,
-        senderName: currentUser.name,
+        senderName: sender.name,
         receiverName: activeConv?.otherUser.name || "Host",
         detectedType: check.detectedTypes.join(", "),
         maskedSnippet: text.slice(0, 100) + "...",
@@ -242,6 +347,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const createBookingRequest = (listingId: string, message: string, dates: string) => {
+    const user = currentUser || CURRENT_USER;
     const listing = listings.find(l => l.id === listingId);
     if (!listing) throw new Error("Listing not found");
 
@@ -254,8 +360,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       listingId: listing.id,
       listingTitle: listing.title,
       category: listing.category,
-      applicantId: currentUser.id,
-      applicant: currentUser,
+      applicantId: user.id,
+      applicant: user,
       hostId: listing.hostId,
       status: "pending",
       dates,
@@ -281,11 +387,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const submitKYC = (data: { documentType: "passport" | "aadhaar" | "driving_license" | "national_id"; documentNumber: string; country: string; idPhotoUrl: string; selfieUrl: string }) => {
+    const user = currentUser || CURRENT_USER;
     const newKyc: KYCSubmission = {
       id: `kyc-${Date.now()}`,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userAvatar: currentUser.avatar,
+      userId: user.id,
+      userName: user.name,
+      userAvatar: user.avatar,
       documentType: data.documentType,
       documentNumber: data.documentNumber,
       country: data.country,
@@ -304,13 +411,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
 
     const targetKyc = kycQueue.find(k => k.id === id);
-    if (targetKyc && targetKyc.userId === currentUser.id) {
-      setCurrentUser(prev => ({
+    if (targetKyc && currentUser && targetKyc.userId === currentUser.id) {
+      setCurrentUser(prev => prev ? ({
         ...prev,
         verificationTier: 3,
         idVerified: true,
         verificationBadge: "Gold Verified Shield (Gov ID)"
-      }));
+      }) : null);
     }
   };
 
@@ -326,13 +433,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Platform Revenue Stats Calculation
   const totalBookingsCount = bookingRequests.filter(b => b.status === "accepted" || b.status === "pending").length;
-  const totalPlatformFees = bookingRequests.reduce((acc, b) => acc + (b.platformFee || 0), 0) + 14.00; // includes past completed
+  const totalPlatformFees = bookingRequests.reduce((acc, b) => acc + (b.platformFee || 0), 0) + 14.00;
   const totalGrossVolume = bookingRequests.reduce((acc, b) => acc + (b.totalAmount || 0), 0) + 480.00;
 
   return (
     <AppContext.Provider
       value={{
         currentUser,
+        isAuthenticated: Boolean(currentUser),
+        isAuthModalOpen,
+        authModalReason,
+        openAuthModal,
+        closeAuthModal,
+        setRealUser,
+        loginAsDemoUser,
+        logout,
         activeRole,
         toggleRole,
         currency,
@@ -362,6 +477,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={closeAuthModal}
+        contextMessage={authModalReason}
+      />
     </AppContext.Provider>
   );
 }

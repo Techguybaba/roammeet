@@ -25,6 +25,8 @@ export default function ListingDetailPage() {
 
   const { 
     listings, 
+    currentUser,
+    openAuthModal,
     currency, 
     currencySymbol, 
     startConversationWithHost, 
@@ -41,12 +43,11 @@ export default function ListingDetailPage() {
 
   if (!listing) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <h2 className="text-xl font-bold text-slate-800">Experience not found</h2>
-        <p className="text-sm text-slate-500 mt-2">The listing you are looking for may have expired or been removed.</p>
-        <Link href="/" className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl">
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Explore</span>
+      <div className="max-w-4xl mx-auto py-16 px-4 text-center">
+        <h2 className="text-2xl font-bold text-slate-800">Experience Not Found</h2>
+        <p className="text-slate-500 mt-2">The listing you are searching for might have been filled or expired.</p>
+        <Link href="/" className="inline-block mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold">
+          Back to Discover
         </Link>
       </div>
     );
@@ -68,12 +69,20 @@ export default function ListingDetailPage() {
   const existingRequest = bookingRequests.find(b => b.listingId === listing.id);
 
   const handleStartChat = () => {
+    if (!currentUser) {
+      openAuthModal(`Sign in to message ${listing.host.name} and inquire about this experience.`);
+      return;
+    }
     startConversationWithHost(listing.host, listing.id);
     router.push("/messages");
   };
 
   const handleBookingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) {
+      openAuthModal(`Sign in to book or join "${listing.title}".`);
+      return;
+    }
     const datesDesc = isStay 
       ? `${bookingNights} nights starting ${listing.startDate}` 
       : `${listing.startDate} ${listing.time || ""}`;
