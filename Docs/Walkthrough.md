@@ -95,8 +95,18 @@ A unified, community-driven social travel platform inspired by **BeATravelBuddy*
 
 ---
 
-## 4. Next Steps & Customization
+## 4. Cloud Infrastructure & Live Production Launch
+
+- **Cloud Database (PostgreSQL)**: Connected to Supabase South Asia (Mumbai `ap-south-1`) with 6 production tables, Row Level Security, Realtime subscriptions, and search indexes.
+- **Source Control**: Codebase, configurations, and documentation repository maintained at `https://github.com/Techguybaba/roammeet`.
+- **Global Edge Hosting**: Deployed to Vercel production with automatic SSL (HTTPS), zero cold starts, and continuous integration.
+- **Cost**: **$0.00 / month (100% Free Forever tier)**.
+
+---
+
+## 5. Next Steps & Customization
 
 1. **Branding Customization**: The working title **RoamMeet** is centrally managed in `src/config/site.ts`. Once you and your partner choose an official name, updating that single config updates the entire platform instantly.
-2. **Database Integration**: Ready to connect Supabase (PostgreSQL with Row Level Security) for persistent multi-device chat and automated SMS/email OTP.
-3. **Automated KYC APIs**: Ready to plug into HyperVerge / Cashfree (India) or Stripe Identity (Global) whenever you choose to transition from manual review to automated KYC.
+2. **Automated KYC APIs**: Ready to plug into HyperVerge / Cashfree (India) or Stripe Identity (Global) whenever you choose to transition from admin manual review to automated instant API verification.
+3. **Custom Domain**: Connect your brand domain (e.g. `roammeet.com`) in Vercel with 1 click whenever purchased.
+
