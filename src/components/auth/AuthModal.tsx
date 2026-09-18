@@ -143,7 +143,7 @@ export function AuthModal({ isOpen, onClose, contextMessage }: AuthModalProps) {
             disabled={loading}
             className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-800 dark:text-white text-xs font-bold transition-all shadow-sm mb-4"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -163,6 +163,9 @@ export function AuthModal({ isOpen, onClose, contextMessage }: AuthModalProps) {
             </svg>
             <span>Continue with Google</span>
           </button>
+          <p className="text-[11px] text-center text-slate-400 dark:text-slate-500 mb-3 -mt-2">
+            💡 Or use <strong className="text-slate-600 dark:text-slate-300">Email & Password</strong> below for instant access
+          </p>
 
           <div className="relative flex py-2 items-center mb-4">
             <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
