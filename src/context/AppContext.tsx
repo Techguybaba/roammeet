@@ -306,6 +306,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     setListings(prev => [newListing, ...prev]);
     saveListingToCloud(newListing);
+    setActiveRole("host");
+    setCurrentUser(prev => prev ? { ...prev, isHost: true } : prev);
     return newListing;
   };
 

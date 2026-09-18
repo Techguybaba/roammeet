@@ -68,6 +68,15 @@ export default function ListingDetailPage() {
   // Check if current user already requested
   const existingRequest = bookingRequests.find(b => b.listingId === listing.id);
 
+  // Check if current user is the owner / host of this listing
+  const isOwner = Boolean(
+    currentUser && (
+      currentUser.id === listing.hostId ||
+      currentUser.id === listing.host.id ||
+      (currentUser.email && listing.host.email && currentUser.email.toLowerCase() === listing.host.email.toLowerCase())
+    )
+  );
+
   const handleStartChat = () => {
     if (!currentUser) {
       openAuthModal(`Sign in to message ${listing.host.name} and inquire about this experience.`);
@@ -116,6 +125,50 @@ export default function ListingDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Host Owner Celebratory Banner */}
+      {isOwner && (
+        <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-indigo-50 border-2 border-purple-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-purple-600 text-white flex items-center justify-center font-black text-xl shrink-0 shadow-xs">
+              👑
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-black text-slate-900">
+                  Host View: Your Listing is Live!
+                </h3>
+                <span className="bg-emerald-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
+                  Published
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Travelers can now discover your property, send booking requests, and message you on RoamMeet.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto">
+            <Link
+              href="/host/create"
+              className="flex-1 sm:flex-none text-center px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition shadow-2xs"
+            >
+              + Add Another
+            </Link>
+            <button
+              onClick={() => {
+                if (navigator.clipboard) {
+                  navigator.clipboard.writeText(window.location.href);
+                  alert("Listing link copied to clipboard! Share it with your guests.");
+                }
+              }}
+              className="flex-1 sm:flex-none text-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Share Link</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Listing Title Header */}
       <div>
@@ -306,113 +359,193 @@ export default function ListingDetailPage() {
               </div>
             </div>
 
-            {/* Date / Nights input if Stay */}
-            {isStay && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Number of Nights:</label>
-                <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setBookingNights(Math.max(1, bookingNights - 1))}
-                    className="px-3 py-2 bg-slate-50 text-slate-700 font-bold hover:bg-slate-100"
-                  >
-                    -
-                  </button>
-                  <span className="flex-1 text-center text-xs font-bold">{bookingNights} nights</span>
-                  <button
-                    type="button"
-                    onClick={() => setBookingNights(bookingNights + 1)}
-                    className="px-3 py-2 bg-slate-50 text-slate-700 font-bold hover:bg-slate-100"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            )}
+            {/* If Current User is the Host/Owner */}
+            {isOwner ? (
+              <div className="space-y-4">
+                <div className="bg-gradient-to-br from-indigo-50/80 via-purple-50/60 to-slate-50 border border-indigo-100 rounded-2xl p-4.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-100/80 px-2.5 py-1 rounded-full">
+                      👑 Host Management
+                    </span>
+                    <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Active & Live
+                    </span>
+                  </div>
 
-            {/* Booking Form or Success Message */}
-            {existingRequest || showBookingSuccess ? (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center space-y-2">
-                <div className="w-10 h-10 bg-emerald-600 text-white rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-6 h-6" />
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    You are viewing your own listing! Travelers visiting this page can request to book at your listed price.
+                  </p>
+
+                  <div className="bg-white rounded-xl p-3 border border-slate-200/80 space-y-2 text-xs">
+                    <div className="flex justify-between text-slate-600">
+                      <span>Listing Type:</span>
+                      <span className="font-bold text-slate-900 capitalize">{listing.category.replace("_", " ")}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>Max Guests:</span>
+                      <span className="font-bold text-slate-900">{listing.maxParticipants} People</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>Platform Fee:</span>
+                      <span className="font-bold text-emerald-600">
+                        {isFree ? "Free Tier" : `${currencySymbol}${platformFee.toFixed(2)} (Paid by guest)`}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <h4 className="text-sm font-bold text-emerald-900">
-                  Request Submitted!
-                </h4>
-                <p className="text-xs text-emerald-700">
-                  Host {listing.host.name} has been notified. You can track this in your messages or chat directly.
-                </p>
-                <button
-                  onClick={handleStartChat}
-                  className="mt-2 w-full py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition"
-                >
-                  Open Chat with Host
-                </button>
+
+                {/* Host Control Actions */}
+                <div className="space-y-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText(window.location.href);
+                        alert("Listing link copied! Share this with your friends or guests to let them book.");
+                      }
+                    }}
+                    className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    <span>Share Listing Link</span>
+                  </button>
+
+                  <Link
+                    href="/messages"
+                    className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2"
+                  >
+                    <MessageSquare className="w-4 h-4 text-indigo-600" />
+                    <span>View Inquiries & Messages</span>
+                  </Link>
+
+                  <Link
+                    href="/host/create"
+                    className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2"
+                  >
+                    <span>+ Publish Another Experience</span>
+                  </Link>
+                </div>
+
+                {/* Host Info Notice */}
+                <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-800 flex items-start gap-2">
+                  <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Host Notice:</strong> You cannot book your own listing. To test booking, have a friend open this link on their phone or test in an incognito window!
+                  </span>
+                </div>
               </div>
             ) : (
-              <form onSubmit={handleBookingSubmit} className="space-y-4">
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">
-                    Introduction Message to Host:
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={bookingMessage}
-                    onChange={(e) => setBookingMessage(e.target.value)}
-                    placeholder="Introduce yourself, your arrival timing, or any questions..."
-                    className="w-full border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
-                    required
-                  />
-                </div>
-
-                {/* Price Breakdown */}
-                <div className="space-y-2 text-xs border-t border-slate-100 pt-3">
-                  {!isFree && (
-                    <div className="flex justify-between text-slate-600">
-                      <span>{currencySymbol}{listing.priceAmount} {isStay ? `× ${bookingNights} nights` : ""}</span>
-                      <span>{currencySymbol}{subtotal}</span>
+              <>
+                {/* Date / Nights input if Stay */}
+                {isStay && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Number of Nights:</label>
+                    <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setBookingNights(Math.max(1, bookingNights - 1))}
+                        className="px-3 py-2 bg-slate-50 text-slate-700 font-bold hover:bg-slate-100"
+                      >
+                        -
+                      </button>
+                      <span className="flex-1 text-center text-xs font-bold">{bookingNights} nights</span>
+                      <button
+                        type="button"
+                        onClick={() => setBookingNights(bookingNights + 1)}
+                        className="px-3 py-2 bg-slate-50 text-slate-700 font-bold hover:bg-slate-100"
+                      >
+                        +
+                      </button>
                     </div>
-                  )}
-
-                  <div className="flex justify-between text-slate-600">
-                    <span className="flex items-center gap-1">
-                      <span>Platform Security Fee</span>
-                      <span className="text-[10px] text-emerald-600 font-bold">
-                        {isFree ? "(Free Tier)" : `(${currency === "USD" ? "$1 Flat" : "₹79 Flat"})`}
-                      </span>
-                    </span>
-                    <span>
-                      {isFree ? "FREE" : `${currencySymbol}${platformFee.toFixed(2)}`}
-                    </span>
                   </div>
+                )}
 
-                  <div className="flex justify-between text-sm font-extrabold text-slate-900 pt-2 border-t border-slate-100">
-                    <span>Total</span>
-                    <span>{isFree ? "100% Free" : `${currencySymbol}${grandTotal.toFixed(2)}`}</span>
+                {/* Booking Form or Success Message */}
+                {existingRequest || showBookingSuccess ? (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center space-y-2">
+                    <div className="w-10 h-10 bg-emerald-600 text-white rounded-full flex items-center justify-center mx-auto">
+                      <CheckCircle2 className="w-6 h-6" />
+                    </div>
+                    <h4 className="text-sm font-bold text-emerald-900">
+                      Request Submitted!
+                    </h4>
+                    <p className="text-xs text-emerald-700">
+                      Host {listing.host.name} has been notified. You can track this in your messages or chat directly.
+                    </p>
+                    <button
+                      onClick={handleStartChat}
+                      className="mt-2 w-full py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition"
+                    >
+                      Open Chat with Host
+                    </button>
                   </div>
+                ) : (
+                  <form onSubmit={handleBookingSubmit} className="space-y-4">
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">
+                        Introduction Message to Host:
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={bookingMessage}
+                        onChange={(e) => setBookingMessage(e.target.value)}
+                        placeholder="Introduce yourself, your arrival timing, or any questions..."
+                        className="w-full border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                        required
+                      />
+                    </div>
+
+                    {/* Price Breakdown */}
+                    <div className="space-y-2 text-xs border-t border-slate-100 pt-3">
+                      {!isFree && (
+                        <div className="flex justify-between text-slate-600">
+                          <span>{currencySymbol}{listing.priceAmount} {isStay ? `× ${bookingNights} nights` : ""}</span>
+                          <span>{currencySymbol}{subtotal}</span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between text-slate-600">
+                        <span className="flex items-center gap-1">
+                          <span>Platform Security Fee</span>
+                          <span className="text-[10px] text-emerald-600 font-bold">
+                            {isFree ? "(Free Tier)" : `(${currency === "USD" ? "$1 Flat" : "₹79 Flat"})`}
+                          </span>
+                        </span>
+                        <span>
+                          {isFree ? "FREE" : `${currencySymbol}${platformFee.toFixed(2)}`}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between text-sm font-extrabold text-slate-900 pt-2 border-t border-slate-100">
+                        <span>Total</span>
+                        <span>{isFree ? "100% Free" : `${currencySymbol}${grandTotal.toFixed(2)}`}</span>
+                      </div>
+                    </div>
+
+                    {/* Submit Action */}
+                    <button
+                      type="submit"
+                      className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition"
+                    >
+                      {isFree ? "Request to Join Free Meetup" : isStay ? "Request to Book Stay" : "Request Spot"}
+                    </button>
+                  </form>
+                )}
+
+                {/* Inquire via Protected Chat */}
+                <div className="pt-3 border-t border-slate-100 text-center">
+                  <button
+                    type="button"
+                    onClick={handleStartChat}
+                    className="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center justify-center gap-1 mx-auto"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Ask Host a Question First</span>
+                  </button>
                 </div>
-
-                {/* Submit Action */}
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition"
-                >
-                  {isFree ? "Request to Join Free Meetup" : isStay ? "Request to Book Stay" : "Request Spot"}
-                </button>
-              </form>
+              </>
             )}
-
-            {/* Inquire via Protected Chat */}
-            <div className="pt-3 border-t border-slate-100 text-center">
-              <button
-                type="button"
-                onClick={handleStartChat}
-                className="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center justify-center gap-1 mx-auto"
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>Ask Host a Question First</span>
-              </button>
-            </div>
 
             {/* Anti-Bypass Security Guarantee Footer */}
             <div className="bg-slate-50 p-3 rounded-xl text-[11px] text-slate-500 flex items-start gap-2 border border-slate-200/60">
