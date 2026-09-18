@@ -104,9 +104,47 @@ A unified, community-driven social travel platform inspired by **BeATravelBuddy*
 
 ---
 
-## 5. Next Steps & Customization
+## 5. Real Authentication & User Flow (Supabase Auth)
+
+- **Open Guest Roaming**: Visitors can explore the discovery feed, filter categories, search cities, and inspect complete listing pages without being forced to log in.
+- **Intelligent Action Interceptors**: Clicking high-intent actions (**"Request to Book / Join"**, **"Inquire via Protected Chat"**, **"Host a Stay"**, or **"Trust & KYC"**) dynamically opens the `AuthModal`.
+- **Single Unified Account**: No split portals — hosts and travelers share one unified account, toggling between roles with 1 click in the top navigation bar.
+- **Fast Sign-In Options**:
+  - Email & Password registration with auto-provisioning of cloud profile in the Mumbai Supabase database.
+  - 1-Click Google OAuth button.
+  - Quick 1-Click Demo Login for fast stakeholder testing.
+- **Navbar Integration**: Dynamic "Log In" / "Sign Up" buttons for guests; User Avatar, verification tier badge, and "Log Out" button for signed-in members.
+
+---
+
+## 6. Multi-User Cross-Device Synchronization & Real-Time Cloud Engine
+
+- **Cross-Device Listing Sync**:
+  - When Host A publishes a new Homestay, Travel Companion Meetup, Party, or Activity from any device (phone, laptop, iPad), it is persisted immediately to Supabase Cloud PostgreSQL.
+  - When Traveler B visits the website from across the globe or across the room, the app queries the Mumbai cloud database on mount, displaying Host A's live listing with high-resolution photos and details.
+- **Cross-Device Booking Pipeline**:
+  - When Traveler B clicks **"Request to Book / Join"**, the booking transaction is committed to the cloud database table `bookings`.
+  - The booking includes contact privacy flags (`contact_unlocked = false`) until the host confirms and the $1.00/₹79.00 fee is settled.
+- **Real-Time WebSockets Messenger**:
+  - Uses Supabase Realtime channel subscription (`postgres_changes` on the `messages` table).
+  - When Traveler B sends an inquiry, Host A's device receives the incoming message in real time without refreshing the page.
+  - The Anti-Bypass Contact Guardian intercepts any phone numbers, emails, or payment tags before broadcast.
+- **How to Test With Friends (Live Two-Device Demo)**:
+  1. Open the Vercel production URL on **Phone 1** (Host).
+  2. Click **"Become a Host"** or "Host a Stay" → Sign up / Log in → Publish a new Travel Buddy meetup or Stay.
+  3. Open the Vercel production URL on **Phone 2** (Traveler / Friend).
+  4. Notice the newly created listing appears immediately on Phone 2's feed!
+  5. Click into the listing on Phone 2 → Click **"Inquire via Protected Chat"** or **"Request to Book"**.
+  6. The message and booking appear live on Phone 1!
+
+---
+
+## 7. Next Steps & Customization
 
 1. **Branding Customization**: The working title **RoamMeet** is centrally managed in `src/config/site.ts`. Once you and your partner choose an official name, updating that single config updates the entire platform instantly.
 2. **Automated KYC APIs**: Ready to plug into HyperVerge / Cashfree (India) or Stripe Identity (Global) whenever you choose to transition from admin manual review to automated instant API verification.
 3. **Custom Domain**: Connect your brand domain (e.g. `roammeet.com`) in Vercel with 1 click whenever purchased.
+4. **Google OAuth Activation**: To activate live Google 1-Tap logins, simply enable Google provider in your Supabase dashboard under *Authentication > Providers*.
+
+
 

@@ -19,7 +19,16 @@ import {
 } from "@/lib/mock-data";
 import { inspectAndSanitizeMessage } from "@/lib/anti-bypass";
 import { SITE_CONFIG } from "@/config/site";
-import { supabase, signOutUser, fetchProfileFromCloud } from "@/lib/supabase";
+import { 
+  supabase, 
+  signOutUser, 
+  fetchProfileFromCloud,
+  fetchCloudListings,
+  saveListingToCloud,
+  saveBookingToCloud,
+  saveMessageToCloud,
+  subscribeToRealtimeMessages
+} from "@/lib/supabase";
 import { AuthModal } from "@/components/auth/AuthModal";
 
 interface AppContextType {
@@ -221,6 +230,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // 1. Fetch live listings from Supabase cloud
+  useEffect(() => {
+    fetchCloudListings().then((cloudListings) => {
+      if (cloudListings && cloudListings.length > 0) {
+        setListings(cloudListings);
+      }
+    });
+  }, []);
+
+  // 2. Real-time chat WebSocket subscription across devices
+  useEffect(() => {
+    if (!activeConversationId) return;
+
+    const unsubscribe = subscribeToRealtimeMessages(activeConversationId, (incomingMsg) => {
+      setMessages(prev => {
+        const currentList = prev[activeConversationId] || [];
+        if (currentList.some(m => m.id === incomingMsg.id)) return prev;
+        return {
+          ...prev,
+          [activeConversationId]: [...currentList, incomingMsg]
+        };
+      });
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [activeConversationId]);
+
   const openAuthModal = (reason?: string) => {
     setAuthModalReason(reason);
     setIsAuthModalOpen(true);
@@ -267,6 +305,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       platformFee: data.category === "travel_buddy" ? 0 : (currency === "USD" ? 1.00 : 79.00)
     };
     setListings(prev => [newListing, ...prev]);
+    saveListingToCloud(newListing);
     return newListing;
   };
 
@@ -293,6 +332,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...prev,
       [conversationId]: [...(prev[conversationId] || []), newMessage]
     }));
+
+    // Broadcast and save to Supabase Cloud
+    saveMessageToCloud(newMessage);
 
     setConversations(prev =>
       prev.map(c =>
@@ -373,6 +415,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
 
     setBookingRequests(prev => [newRequest, ...prev]);
+    saveBookingToCloud(newRequest);
     return newRequest;
   };
 

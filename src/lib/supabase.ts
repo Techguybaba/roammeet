@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
-import { User as AppUser } from "@/types";
+import { User as AppUser, Listing, BookingRequest, ChatMessage } from "@/types";
+import { MOCK_USERS, CURRENT_USER } from "@/lib/mock-data";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -132,5 +133,259 @@ export async function fetchProfileFromCloud(userId: string): Promise<AppUser | n
     rating: Number(data.rating) || 5.0,
     reviewCount: data.review_count || 0,
     joinedDate: new Date(data.created_at || Date.now()).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+  };
+}
+
+interface DbListingItem {
+  id: string;
+  host_id: string;
+  category: "stay" | "travel_buddy" | "party" | "activity";
+  title: string;
+  description: string;
+  destination_city: string;
+  country: string;
+  location_name: string;
+  address_hint: string;
+  exact_address: string;
+  start_date: string;
+  end_date?: string | null;
+  time?: string | null;
+  pricing_type: "free" | "fixed" | "split";
+  price_amount: number;
+  currency: string;
+  platform_fee: number;
+  max_participants: number;
+  current_participants: number;
+  photos?: string[];
+  amenities?: string[];
+  rules?: string[];
+  status?: "active" | "filled" | "completed" | "cancelled";
+  is_promoted?: boolean;
+  profiles?: {
+    id: string;
+    name: string;
+    email?: string;
+    avatar_url?: string;
+    bio?: string;
+    city?: string;
+    country?: string;
+    is_host?: boolean;
+    verification_tier?: 0 | 1 | 2 | 3 | 4;
+    verification_badge?: string;
+    phone_verified?: boolean;
+    selfie_verified?: boolean;
+    id_verified?: boolean;
+    rating?: number;
+    review_count?: number;
+  };
+}
+
+/**
+ * Fetch all active listings from Supabase with host profiles
+ */
+export async function fetchCloudListings(): Promise<Listing[] | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from("listings")
+      .select("*, profiles(*)")
+      .eq("status", "active")
+      .order("created_at", { ascending: false });
+
+    if (error || !data || data.length === 0) return null;
+
+    const items = data as unknown as DbListingItem[];
+    return items.map((item) => {
+      const hostData = item.profiles;
+      const hostUser: AppUser = hostData ? {
+        id: hostData.id,
+        name: hostData.name,
+        email: hostData.email || "",
+        avatar: hostData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(hostData.name)}`,
+        bio: hostData.bio || "Host on RoamMeet",
+        city: hostData.city || item.destination_city,
+        country: hostData.country || item.country,
+        isHost: true,
+        verificationTier: hostData.verification_tier ?? 2,
+        verificationBadge: hostData.verification_badge || "Verified Host",
+        phoneVerified: Boolean(hostData.phone_verified),
+        selfieVerified: Boolean(hostData.selfie_verified),
+        idVerified: Boolean(hostData.id_verified),
+        rating: Number(hostData.rating) || 5.0,
+        reviewCount: hostData.review_count || 10,
+        joinedDate: "Member"
+      } : (MOCK_USERS[item.host_id] || CURRENT_USER);
+
+      return {
+        id: item.id,
+        hostId: item.host_id,
+        host: hostUser,
+        category: item.category,
+        title: item.title,
+        description: item.description,
+        destinationCity: item.destination_city,
+        country: item.country,
+        locationName: item.location_name,
+        addressHint: item.address_hint,
+        exactAddress: item.exact_address,
+        startDate: item.start_date,
+        endDate: item.end_date || undefined,
+        time: item.time || undefined,
+        pricingType: item.pricing_type,
+        priceAmount: Number(item.price_amount) || 0,
+        currency: item.currency || "USD",
+        platformFee: Number(item.platform_fee) || 0,
+        maxParticipants: item.max_participants || 2,
+        currentParticipants: item.current_participants || 0,
+        photos: Array.isArray(item.photos) && item.photos.length > 0 ? item.photos : ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&auto=format&fit=crop&q=80"],
+        amenities: Array.isArray(item.amenities) ? item.amenities : [],
+        rules: Array.isArray(item.rules) ? item.rules : [],
+        status: item.status || "active",
+        isPromoted: Boolean(item.is_promoted)
+      };
+    });
+  } catch (err) {
+    console.error("Failed to fetch cloud listings:", err);
+    return null;
+  }
+}
+
+/**
+ * Save new listing to Supabase Cloud
+ */
+export async function saveListingToCloud(listing: Listing) {
+  if (!supabase) return;
+  try {
+    await supabase.from("listings").insert({
+      id: listing.id,
+      host_id: listing.hostId,
+      category: listing.category,
+      title: listing.title,
+      description: listing.description,
+      destination_city: listing.destinationCity,
+      country: listing.country,
+      location_name: listing.locationName,
+      address_hint: listing.addressHint,
+      exact_address: listing.exactAddress,
+      start_date: listing.startDate,
+      end_date: listing.endDate || null,
+      time: listing.time || null,
+      pricing_type: listing.pricingType,
+      price_amount: listing.priceAmount,
+      currency: listing.currency,
+      platform_fee: listing.platformFee,
+      max_participants: listing.maxParticipants,
+      current_participants: listing.currentParticipants,
+      photos: listing.photos,
+      amenities: listing.amenities,
+      rules: listing.rules,
+      status: listing.status,
+      is_promoted: listing.isPromoted
+    });
+  } catch (err) {
+    console.error("Failed to save listing to cloud:", err);
+  }
+}
+
+/**
+ * Save booking to Supabase Cloud
+ */
+export async function saveBookingToCloud(booking: BookingRequest) {
+  if (!supabase) return;
+  try {
+    await supabase.from("bookings").insert({
+      id: booking.id,
+      listing_id: booking.listingId,
+      listing_title: booking.listingTitle,
+      category: booking.category,
+      applicant_id: booking.applicantId,
+      host_id: booking.hostId,
+      status: booking.status,
+      dates: booking.dates,
+      total_amount: booking.totalAmount,
+      platform_fee: booking.platformFee,
+      message: booking.message,
+      contact_unlocked: booking.contactUnlocked
+    });
+  } catch (err) {
+    console.error("Failed to save booking to cloud:", err);
+  }
+}
+
+/**
+ * Save chat message to Supabase Cloud
+ */
+export async function saveMessageToCloud(message: ChatMessage) {
+  if (!supabase) return;
+  try {
+    await supabase.from("messages").insert({
+      id: message.id,
+      conversation_id: message.conversationId,
+      sender_id: message.senderId,
+      sender_name: message.senderName,
+      sender_avatar: message.senderAvatar,
+      receiver_id: message.receiverId,
+      text: message.text,
+      is_masked: message.isMasked,
+      detected_types: message.detectedTypes
+    });
+  } catch (err) {
+    console.error("Failed to save message to cloud:", err);
+  }
+}
+
+/**
+ * Subscribe to real-time incoming messages via Supabase Realtime WebSocket
+ */
+interface DbMessageRow {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  sender_name: string;
+  sender_avatar?: string;
+  receiver_id: string;
+  text: string;
+  is_masked?: boolean;
+  detected_types?: string[];
+}
+
+export function subscribeToRealtimeMessages(
+  conversationId: string, 
+  onNewMessage: (msg: ChatMessage) => void
+) {
+  if (!supabase) return () => {};
+
+  const channel = supabase
+    .channel(`chat-${conversationId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `conversation_id=eq.${conversationId}`
+      },
+      (payload) => {
+        const row = payload.new as unknown as DbMessageRow;
+        if (row) {
+          onNewMessage({
+            id: row.id,
+            conversationId: row.conversation_id,
+            senderId: row.sender_id,
+            senderName: row.sender_name,
+            senderAvatar: row.sender_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(row.sender_name)}`,
+            receiverId: row.receiver_id,
+            text: row.text,
+            isMasked: Boolean(row.is_masked),
+            detectedTypes: Array.isArray(row.detected_types) ? row.detected_types : [],
+            timestamp: "Just now"
+          });
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
   };
 }
