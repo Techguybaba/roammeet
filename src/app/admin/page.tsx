@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useApp } from "@/context/AppContext";
 import { 
@@ -11,7 +11,8 @@ import {
   CheckCircle2, 
   XCircle, 
   Lock, 
-  ArrowLeft
+  ArrowLeft,
+  KeyRound
 } from "lucide-react";
 
 export default function AdminPage() {
@@ -30,7 +31,113 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<"kyc" | "flagged" | "bookings">("kyc");
   const [selectedDocPreview, setSelectedDocPreview] = useState<string | null>(null);
 
+  // Confidential Partner Gate state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasCheckedSession, setHasCheckedSession] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState<string | null>(null);
+
+  // Check if session is already unlocked
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("roammeet_admin_authenticated");
+      if (saved === "true") {
+        setIsAuthenticated(true);
+      }
+      setHasCheckedSession(true);
+    }
+  }, []);
+
+  const handleUnlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pinInput.trim() === "260689") {
+      setIsAuthenticated(true);
+      setPinError(null);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("roammeet_admin_authenticated", "true");
+      }
+    } else {
+      setPinError("Incorrect Partner PIN. Access Denied.");
+      setPinInput("");
+    }
+  };
+
+  const handleLockPortal = () => {
+    setIsAuthenticated(false);
+    setPinInput("");
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("roammeet_admin_authenticated");
+    }
+  };
+
   const pendingKyc = kycQueue.filter(k => k.status === "pending");
+
+  // If not authenticated, render the Partner PIN Security Gate
+  if (hasCheckedSession && !isAuthenticated) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-8 shadow-xl text-center space-y-6">
+          <div className="w-16 h-16 bg-gradient-to-tr from-slate-900 to-indigo-950 text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-100">
+            <Lock className="w-8 h-8 text-indigo-400" />
+          </div>
+
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
+              Confidential • Partners Only
+            </div>
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">
+              Executive & Founder Portal
+            </h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              This area contains proprietary company revenue metrics, escrow balances, and user KYC identity documents. Enter your Partner PIN to proceed.
+            </p>
+          </div>
+
+          <form onSubmit={handleUnlock} className="space-y-4">
+            <div>
+              <input
+                type="password"
+                maxLength={6}
+                value={pinInput}
+                onChange={(e) => {
+                  setPinInput(e.target.value);
+                  setPinError(null);
+                }}
+                placeholder="Enter 6-digit Partner PIN"
+                className="w-full text-center text-xl font-mono tracking-widest py-3 px-4 rounded-xl border border-slate-300 text-slate-900 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:outline-hidden transition"
+                autoFocus
+                required
+              />
+            </div>
+
+            {pinError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl animate-shake">
+                {pinError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition cursor-pointer flex items-center justify-center gap-2"
+            >
+              <KeyRound className="w-4 h-4" />
+              <span>Unlock Executive Portal</span>
+            </button>
+          </form>
+
+          <div className="pt-2 border-t border-slate-100">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-slate-600 transition"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Return to Public Website</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -42,9 +149,19 @@ export default function AdminPage() {
           <span>Back to Feed</span>
         </Link>
 
-        <div className="flex items-center gap-2 text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full font-bold">
-          <Lock className="w-3.5 h-3.5" />
-          <span>Admin & Platform Governance Portal</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full font-bold">
+            <Lock className="w-3.5 h-3.5" />
+            <span>Admin & Platform Governance Portal</span>
+          </div>
+
+          <button
+            onClick={handleLockPortal}
+            className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-full transition cursor-pointer"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>Lock Portal</span>
+          </button>
         </div>
       </div>
 

@@ -11,7 +11,6 @@ import {
   PlusCircle, 
   ShieldCheck, 
   Lock, 
-  BarChart3,
   Menu,
   X,
   LogIn,
@@ -28,14 +27,12 @@ export function Navbar() {
     toggleRole, 
     currency, 
     setCurrency, 
-    conversations,
-    kycQueue 
+    conversations 
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const totalUnread = conversations.reduce((acc, c) => acc + c.unreadCount, 0);
-  const pendingKycCount = kycQueue.filter(k => k.status === "pending").length;
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-xs">
@@ -148,23 +145,6 @@ export function Navbar() {
               <span>Trust & KYC</span>
             </Link>
 
-            {/* Admin Center */}
-            <Link
-              href="/admin"
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors relative ${
-                pathname === "/admin"
-                  ? "text-blue-700 bg-blue-50" 
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              }`}
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>Admin Hub</span>
-              {pendingKycCount > 0 && (
-                <span className="bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full">
-                  {pendingKycCount} KYC
-                </span>
-              )}
-            </Link>
           </nav>
 
           {/* Right Action Cluster */}
@@ -325,13 +305,6 @@ export function Navbar() {
             className="block px-3 py-2 rounded-lg text-sm font-medium text-emerald-700 hover:bg-emerald-50"
           >
             Trust & KYC Verification
-          </Link>
-          <Link
-            href="/admin"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-lg text-sm font-medium text-blue-700 hover:bg-blue-50"
-          >
-            Admin Moderation & Revenue
           </Link>
         </div>
       )}

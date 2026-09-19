@@ -67,7 +67,7 @@ export default function RootLayout({
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Trust & Security</h4>
                   <ul className="space-y-2 text-sm text-slate-600">
                     <li><Link href="/profile/verification" className="hover:text-indigo-600 transition">Identity Verification (KYC)</Link></li>
-                    <li><Link href="/admin" className="hover:text-indigo-600 transition">Admin Moderation Portal</Link></li>
+                    <li><span className="text-slate-400">Escrow Payment Protection</span></li>
                     <li><span className="text-slate-400">Anti-Leakage Chat Guardian</span></li>
                     <li><span className="text-slate-400">$1 / ₹79 Deposit Guarantee</span></li>
                   </ul>
