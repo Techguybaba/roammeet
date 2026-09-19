@@ -18,6 +18,7 @@ import {
   Calendar,
   Home
 } from "lucide-react";
+import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -215,6 +216,9 @@ export function Navbar() {
                 ₹ INR
               </button>
             </div>
+
+            {/* Notification Center */}
+            {currentUser && <NotificationDropdown />}
 
             {/* Authentication Buttons vs Profile Card */}
             {currentUser ? (

@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { User as AppUser, Listing, BookingRequest, ChatMessage, Review, VerificationTier } from "@/types";
+import { User as AppUser, Listing, BookingRequest, ChatMessage, Review, VerificationTier, PayoutMethod, AppNotification } from "@/types";
 import { MOCK_USERS, CURRENT_USER } from "@/lib/mock-data";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -630,4 +630,173 @@ export function subscribeToRealtimeMessages(
   return () => {
     supabase.removeChannel(channel);
   };
+}
+
+/**
+ * Save notification to Supabase Cloud
+ */
+export async function saveNotificationToCloud(notification: AppNotification) {
+  if (!supabase) return;
+  try {
+    await supabase.from("notifications").insert({
+      id: notification.id,
+      user_id: notification.userId,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      link: notification.link,
+      read: notification.read
+    });
+  } catch (err) {
+    console.error("Failed to save notification to cloud:", err);
+  }
+}
+
+interface DbNotificationItem {
+  id: string;
+  user_id: string;
+  type: "booking_request" | "booking_accepted" | "booking_declined" | "new_review" | "new_message" | "payout_processed";
+  title: string;
+  message: string;
+  link: string;
+  read: boolean;
+  created_at?: string;
+}
+
+/**
+ * Fetch user notifications from Supabase Cloud
+ */
+export async function fetchCloudNotifications(userId: string): Promise<AppNotification[] | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error || !data) return null;
+
+    const items = data as unknown as DbNotificationItem[];
+    return items.map((item) => ({
+      id: item.id,
+      userId: item.user_id,
+      type: item.type,
+      title: item.title,
+      message: item.message,
+      link: item.link,
+      read: item.read,
+      createdAt: item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"
+    }));
+  } catch (err) {
+    console.error("Failed to fetch cloud notifications:", err);
+    return null;
+  }
+}
+
+/**
+ * Mark notification as read in Supabase Cloud
+ */
+export async function markNotificationAsReadInCloud(notificationId: string) {
+  if (!supabase) return;
+  try {
+    await supabase.from("notifications").update({ read: true }).eq("id", notificationId);
+  } catch (err) {
+    console.error("Failed to mark notification read in cloud:", err);
+  }
+}
+
+/**
+ * Mark all user notifications as read in Supabase Cloud
+ */
+export async function markAllNotificationsAsReadInCloud(userId: string) {
+  if (!supabase) return;
+  try {
+    await supabase.from("notifications").update({ read: true }).eq("user_id", userId);
+  } catch (err) {
+    console.error("Failed to mark all notifications read in cloud:", err);
+  }
+}
+
+/**
+ * Save payout method to Supabase Cloud
+ */
+export async function savePayoutMethodToCloud(method: PayoutMethod) {
+  if (!supabase) return;
+  try {
+    await supabase.from("payout_methods").insert({
+      id: method.id,
+      user_id: method.userId,
+      type: method.type,
+      is_default: method.isDefault,
+      upi_id: method.upiId,
+      account_holder_name: method.accountHolderName,
+      account_number: method.accountNumber,
+      ifsc_code: method.ifscCode,
+      bank_name: method.bankName,
+      paypal_email: method.paypalEmail
+    });
+  } catch (err) {
+    console.error("Failed to save payout method to cloud:", err);
+  }
+}
+
+interface DbPayoutMethodItem {
+  id: string;
+  user_id: string;
+  type: "upi" | "bank" | "paypal";
+  is_default: boolean;
+  upi_id?: string;
+  account_holder_name?: string;
+  account_number?: string;
+  ifsc_code?: string;
+  bank_name?: string;
+  paypal_email?: string;
+  created_at?: string;
+}
+
+/**
+ * Fetch user payout methods from Supabase Cloud
+ */
+export async function fetchPayoutMethodsFromCloud(userId: string): Promise<PayoutMethod[] | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from("payout_methods")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error || !data) return null;
+
+    const items = data as unknown as DbPayoutMethodItem[];
+    return items.map((item) => ({
+      id: item.id,
+      userId: item.user_id,
+      type: item.type,
+      isDefault: Boolean(item.is_default),
+      upiId: item.upi_id,
+      accountHolderName: item.account_holder_name,
+      accountNumber: item.account_number,
+      ifscCode: item.ifsc_code,
+      bankName: item.bank_name,
+      paypalEmail: item.paypal_email,
+      createdAt: item.created_at || new Date().toISOString()
+    }));
+  } catch (err) {
+    console.error("Failed to fetch payout methods from cloud:", err);
+    return null;
+  }
+}
+
+/**
+ * Delete payout method from Supabase Cloud
+ */
+export async function deletePayoutMethodFromCloud(methodId: string) {
+  if (!supabase) return;
+  try {
+    await supabase.from("payout_methods").delete().eq("id", methodId);
+  } catch (err) {
+    console.error("Failed to delete payout method from cloud:", err);
+  }
 }

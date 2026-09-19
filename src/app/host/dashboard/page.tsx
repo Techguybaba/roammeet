@@ -19,7 +19,14 @@ import {
   PauseCircle,
   PlayCircle,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  CreditCard,
+  Landmark,
+  Wallet,
+  ArrowUpRight,
+  Trash2,
+  Check,
+  X
 } from "lucide-react";
 
 export default function HostDashboardPage() {
@@ -33,12 +40,28 @@ export default function HostDashboardPage() {
     listings, 
     toggleListingStatus,
     startConversationWithHost, 
-    currencySymbol 
+    currencySymbol,
+    payoutMethods,
+    addPayoutMethod,
+    removePayoutMethod,
+    setDefaultPayoutMethod,
+    addNotification
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<"requests" | "listings">("requests");
+  const [activeTab, setActiveTab] = useState<"requests" | "listings" | "earnings">("requests");
   const [requestFilter, setRequestFilter] = useState<"all" | "pending" | "accepted" | "declined">("all");
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
+
+  // Payout Method Modal State
+  const [isAddPayoutOpen, setIsAddPayoutOpen] = useState(false);
+  const [payoutFormType, setPayoutFormType] = useState<"upi" | "bank" | "paypal">("upi");
+  const [formUpiId, setFormUpiId] = useState("");
+  const [formHolderName, setFormHolderName] = useState("");
+  const [formAccountNumber, setFormAccountNumber] = useState("");
+  const [formIfsc, setFormIfsc] = useState("");
+  const [formBankName, setFormBankName] = useState("");
+  const [formPaypalEmail, setFormPaypalEmail] = useState("");
+  const [withdrawnIds, setWithdrawnIds] = useState<Set<string>>(new Set());
 
   // Authentication Guard
   if (!currentUser) {
@@ -92,11 +115,19 @@ export default function HostDashboardPage() {
     l.host.id === currentUser.id
   );
 
-  // Statistics
-  const totalEarnings = hostRequests
-    .filter(r => r.status === "accepted")
+  // Statistics & Financials
+  const acceptedBookings = hostRequests.filter(r => r.status === "accepted");
+  const grossVolume = acceptedBookings.reduce((acc, r) => acc + (r.totalAmount || 0) + (r.platformFee || 0), 0);
+  const totalPlatformFees = acceptedBookings.reduce((acc, r) => acc + (r.platformFee || 0), 0);
+  const totalHostNet = acceptedBookings.reduce((acc, r) => acc + (r.totalAmount || 0), 0);
+  const availableBalance = acceptedBookings
+    .filter(b => !withdrawnIds.has(b.id))
+    .reduce((acc, r) => acc + (r.totalAmount || 0), 0);
+  const alreadyPaidOut = acceptedBookings
+    .filter(b => withdrawnIds.has(b.id))
     .reduce((acc, r) => acc + (r.totalAmount || 0), 0);
 
+  const totalEarnings = totalHostNet;
   const pendingRequestsCount = hostRequests.filter(r => r.status === "pending").length;
   const activeListingsCount = hostListings.filter(l => l.status === "active").length;
 
@@ -115,6 +146,75 @@ export default function HostDashboardPage() {
   const handleChat = (applicant: typeof currentUser, listingId: string) => {
     startConversationWithHost(applicant, listingId);
     router.push("/messages");
+  };
+
+  const handleSavePayoutMethod = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (payoutFormType === "upi") {
+      if (!formUpiId.trim()) return;
+      addPayoutMethod({
+        type: "upi",
+        upiId: formUpiId.trim(),
+        isDefault: payoutMethods.length === 0
+      });
+    } else if (payoutFormType === "bank") {
+      if (!formAccountNumber.trim() || !formIfsc.trim()) return;
+      addPayoutMethod({
+        type: "bank",
+        accountHolderName: formHolderName.trim() || currentUser.name,
+        accountNumber: formAccountNumber.trim(),
+        ifscCode: formIfsc.trim().toUpperCase(),
+        bankName: formBankName.trim() || "Bank",
+        isDefault: payoutMethods.length === 0
+      });
+    } else {
+      if (!formPaypalEmail.trim()) return;
+      addPayoutMethod({
+        type: "paypal",
+        paypalEmail: formPaypalEmail.trim(),
+        isDefault: payoutMethods.length === 0
+      });
+    }
+
+    setIsAddPayoutOpen(false);
+    setFormUpiId("");
+    setFormAccountNumber("");
+    setFormIfsc("");
+    setFormHolderName("");
+    setFormBankName("");
+    setFormPaypalEmail("");
+    setActionSuccessMessage("Payout method saved successfully!");
+    setTimeout(() => setActionSuccessMessage(null), 4000);
+  };
+
+  const handleWithdrawFunds = () => {
+    if (availableBalance <= 0) return;
+    if (payoutMethods.length === 0) {
+      setIsAddPayoutOpen(true);
+      return;
+    }
+    const primaryMethod = payoutMethods.find(m => m.isDefault) || payoutMethods[0];
+    const targetMethodLabel = primaryMethod.type === "upi"
+      ? `UPI (${primaryMethod.upiId})`
+      : primaryMethod.type === "bank"
+      ? `Bank Account (${primaryMethod.bankName || "Bank"} •••• ${primaryMethod.accountNumber?.slice(-4)})`
+      : `PayPal (${primaryMethod.paypalEmail})`;
+
+    const newSet = new Set(withdrawnIds);
+    acceptedBookings.forEach(b => newSet.add(b.id));
+    setWithdrawnIds(newSet);
+
+    addNotification({
+      userId: currentUser.id,
+      type: "payout_processed",
+      title: "Payout Initiated 💸",
+      message: `Transfer of ${currencySymbol}${availableBalance.toLocaleString()} initiated to ${targetMethodLabel}. Funds usually arrive within 24 hours.`,
+      link: "/host/dashboard",
+      read: false
+    });
+
+    setActionSuccessMessage(`Payout of ${currencySymbol}${availableBalance.toLocaleString()} initiated to ${targetMethodLabel}!`);
+    setTimeout(() => setActionSuccessMessage(null), 5000);
   };
 
   return (
@@ -267,6 +367,25 @@ export default function HostDashboardPage() {
               <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold">
                 {hostListings.length}
               </span>
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("earnings")}
+            className={`pb-3 text-sm font-extrabold transition-all relative cursor-pointer ${
+              activeTab === "earnings" 
+                ? "text-indigo-600 border-b-2 border-indigo-600" 
+                : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-emerald-600" />
+              <span>Earnings & Payouts</span>
+              {availableBalance > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                  {currencySymbol}{availableBalance}
+                </span>
+              )}
             </span>
           </button>
         </div>
@@ -552,6 +671,432 @@ export default function HostDashboardPage() {
                 Publish a homestay, companion meetup, party, or guided local experience.
               </p>
             </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Earnings & Payouts Content */}
+      {activeTab === "earnings" && (
+        <div className="space-y-8">
+          
+          {/* Header & Quick Actions */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs">
+            <div>
+              <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-emerald-600" />
+                <span>Host Earnings & Direct Payouts</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                All host earnings are 100% yours. RoamMeet charges zero commission on your stay pricing.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => setIsAddPayoutOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4 text-indigo-600" />
+                <span>Add Payout Method</span>
+              </button>
+
+              <button
+                onClick={handleWithdrawFunds}
+                disabled={availableBalance <= 0}
+                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition shadow-md cursor-pointer ${
+                  availableBalance > 0
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                    : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                }`}
+              >
+                <ArrowUpRight className="w-4 h-4" />
+                <span>Withdraw {currencySymbol}{availableBalance.toLocaleString()}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Financial Metrics 4-Col Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
+              <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider">
+                <span>Net Host Payouts</span>
+                <DollarSign className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="text-2xl font-black text-slate-900">
+                {currencySymbol}{totalHostNet.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-emerald-600 font-semibold">
+                From {currencySymbol}{grossVolume.toLocaleString()} gross volume
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
+              <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider">
+                <span>Available for Withdrawal</span>
+                <Wallet className="w-4 h-4 text-indigo-600" />
+              </div>
+              <div className="text-2xl font-black text-indigo-600">
+                {currencySymbol}{availableBalance.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-indigo-600 font-semibold">
+                Ready for instant transfer
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
+              <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider">
+                <span>Processed Payouts</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900">
+                {currencySymbol}{alreadyPaidOut.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-slate-400 font-medium">
+                Sent to your bank/UPI
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
+              <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider">
+                <span>Platform Guarantee Fees</span>
+                <ShieldCheck className="w-4 h-4 text-amber-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900">
+                {currencySymbol}{totalPlatformFees.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-slate-400 font-medium">
+                Flat $1/₹79 guest KYC fee
+              </div>
+            </div>
+          </div>
+
+          {/* Saved Payout Methods Card */}
+          <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-base font-extrabold text-slate-900">
+                  Payout Methods
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Choose where RoamMeet sends your stay earnings (UPI ID, Direct Bank Account, or PayPal).
+                </p>
+              </div>
+
+              <button
+                onClick={() => setIsAddPayoutOpen(true)}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition cursor-pointer"
+              >
+                + Add Method
+              </button>
+            </div>
+
+            {payoutMethods.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                <Landmark className="w-8 h-8 text-slate-400 mx-auto" />
+                <div className="text-xs font-bold text-slate-700">No Payout Method Saved</div>
+                <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                  Add your UPI ID or Bank Account to receive direct payouts for your completed stays.
+                </p>
+                <button
+                  onClick={() => setIsAddPayoutOpen(true)}
+                  className="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Configure Payout Method
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {payoutMethods.map((method) => (
+                  <div
+                    key={method.id}
+                    className={`p-4 rounded-2xl border transition relative space-y-3 ${
+                      method.isDefault
+                        ? "border-indigo-500 bg-indigo-50/20 shadow-xs"
+                        : "border-slate-200 bg-white"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
+                          {method.type === "upi" && <span className="font-black text-xs text-indigo-600">UPI</span>}
+                          {method.type === "bank" && <Landmark className="w-5 h-5 text-indigo-600" />}
+                          {method.type === "paypal" && <CreditCard className="w-5 h-5 text-blue-600" />}
+                        </div>
+                        <div>
+                          <div className="font-extrabold text-sm text-slate-900">
+                            {method.type === "upi" && method.upiId}
+                            {method.type === "bank" && `${method.bankName} (•••• ${method.accountNumber?.slice(-4)})`}
+                            {method.type === "paypal" && method.paypalEmail}
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            {method.type === "upi" && "Instant UPI Transfer"}
+                            {method.type === "bank" && `IFSC: ${method.ifscCode} • ${method.accountHolderName}`}
+                            {method.type === "paypal" && "International PayPal Transfer"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {method.isDefault && (
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold">
+                          Primary
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                      {!method.isDefault ? (
+                        <button
+                          onClick={() => setDefaultPayoutMethod(method.id)}
+                          className="text-indigo-600 font-bold hover:underline cursor-pointer"
+                        >
+                          Make Primary
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 font-medium">Default account</span>
+                      )}
+
+                      <button
+                        onClick={() => removePayoutMethod(method.id)}
+                        className="text-rose-600 font-bold hover:text-rose-800 transition cursor-pointer flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Completed Reservations & Payout Ledger */}
+          <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-base font-extrabold text-slate-900">
+                  Completed Reservations Ledger
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Track guest stay payments, platform guarantee fees, and net payouts.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-slate-400">
+                {acceptedBookings.length} {acceptedBookings.length === 1 ? "Record" : "Records"}
+              </span>
+            </div>
+
+            {acceptedBookings.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500">
+                No confirmed reservations yet. Once you accept booking requests, their financial settlement details will appear here.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden">
+                {acceptedBookings.map((b) => {
+                  const isWithdrawn = withdrawnIds.has(b.id);
+                  return (
+                    <div key={b.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white hover:bg-slate-50/50 transition">
+                      <div className="flex items-center gap-3">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={b.applicant.avatar}
+                          alt={b.applicant.name}
+                          className="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-50 shrink-0"
+                        />
+                        <div>
+                          <div className="font-extrabold text-xs text-slate-900">
+                            {b.listingTitle}
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            Guest: <span className="font-semibold text-slate-700">{b.applicant.name}</span> • {b.dates}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between sm:justify-end gap-6 text-xs">
+                        <div className="text-right">
+                          <div className="font-black text-sm text-slate-900">
+                            {currencySymbol}{b.totalAmount}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            +{currencySymbol}{b.platformFee.toFixed(2)} guest fee
+                          </div>
+                        </div>
+
+                        <div className="shrink-0">
+                          {isWithdrawn ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              <span>Paid Out</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>Available</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* Add Payout Method Modal */}
+      {isAddPayoutOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
+            <button
+              onClick={() => setIsAddPayoutOpen(false)}
+              className="absolute top-5 right-5 p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div>
+              <h3 className="text-lg font-extrabold text-slate-900">Add Payout Method</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Select your preferred transfer channel for guest stay payouts.
+              </p>
+            </div>
+
+            {/* Payout Type Selector Tabs */}
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setPayoutFormType("upi")}
+                className={`py-2 rounded-lg transition cursor-pointer ${
+                  payoutFormType === "upi" ? "bg-white text-indigo-600 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                UPI (India)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPayoutFormType("bank")}
+                className={`py-2 rounded-lg transition cursor-pointer ${
+                  payoutFormType === "bank" ? "bg-white text-indigo-600 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Bank Transfer
+              </button>
+              <button
+                type="button"
+                onClick={() => setPayoutFormType("paypal")}
+                className={`py-2 rounded-lg transition cursor-pointer ${
+                  payoutFormType === "paypal" ? "bg-white text-indigo-600 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                PayPal (Global)
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePayoutMethod} className="space-y-3.5 text-xs">
+              {payoutFormType === "upi" && (
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">UPI ID (VPA):</label>
+                  <input
+                    type="text"
+                    value={formUpiId}
+                    onChange={(e) => setFormUpiId(e.target.value)}
+                    placeholder="e.g. rohit@okhdfcbank or 9876543210@paytm"
+                    className="w-full border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden font-medium"
+                    required
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    Instant zero-fee transfer directly to your Indian bank via UPI.
+                  </span>
+                </div>
+              )}
+
+              {payoutFormType === "bank" && (
+                <>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Account Holder Name:</label>
+                    <input
+                      type="text"
+                      value={formHolderName}
+                      onChange={(e) => setFormHolderName(e.target.value)}
+                      placeholder={currentUser.name}
+                      className="w-full border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Bank Name:</label>
+                    <input
+                      type="text"
+                      value={formBankName}
+                      onChange={(e) => setFormBankName(e.target.value)}
+                      placeholder="e.g. HDFC Bank / Chase / Barclays"
+                      className="w-full border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Account Number:</label>
+                      <input
+                        type="text"
+                        value={formAccountNumber}
+                        onChange={(e) => setFormAccountNumber(e.target.value)}
+                        placeholder="e.g. 50100492104921"
+                        className="w-full border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden font-mono"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">IFSC / Routing Code:</label>
+                      <input
+                        type="text"
+                        value={formIfsc}
+                        onChange={(e) => setFormIfsc(e.target.value)}
+                        placeholder="e.g. HDFC0001234"
+                        className="w-full border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden font-mono uppercase"
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {payoutFormType === "paypal" && (
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">PayPal Email Address:</label>
+                  <input
+                    type="email"
+                    value={formPaypalEmail}
+                    onChange={(e) => setFormPaypalEmail(e.target.value)}
+                    placeholder="e.g. yourname@gmail.com"
+                    className="w-full border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                    required
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    For global hosts receiving international USD payouts.
+                  </span>
+                </div>
+              )}
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddPayoutOpen(false)}
+                  className="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-semibold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition shadow-md cursor-pointer"
+                >
+                  Save Method
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

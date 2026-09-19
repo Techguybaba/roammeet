@@ -9,7 +9,9 @@ import {
   ChatMessage, 
   KYCSubmission, 
   FlaggedMessageRecord,
-  Review
+  Review,
+  PayoutMethod,
+  AppNotification
 } from "@/types";
 import { 
   CURRENT_USER, 
@@ -33,7 +35,14 @@ import {
   saveReviewToCloud,
   fetchCloudReviews,
   saveMessageToCloud,
-  subscribeToRealtimeMessages
+  subscribeToRealtimeMessages,
+  saveNotificationToCloud,
+  fetchCloudNotifications,
+  markNotificationAsReadInCloud,
+  markAllNotificationsAsReadInCloud,
+  savePayoutMethodToCloud,
+  fetchPayoutMethodsFromCloud,
+  deletePayoutMethodFromCloud
 } from "@/lib/supabase";
 import { AuthModal } from "@/components/auth/AuthModal";
 
@@ -69,6 +78,15 @@ interface AppContextType {
   bookingRequests: BookingRequest[];
   createBookingRequest: (listingId: string, message: string, dates: string) => BookingRequest;
   respondToBookingRequest: (requestId: string, status: "accepted" | "declined") => void;
+  notifications: AppNotification[];
+  unreadNotificationsCount: number;
+  addNotification: (notification: Omit<AppNotification, "id" | "createdAt">) => void;
+  markNotificationAsRead: (id: string) => void;
+  markAllNotificationsAsRead: () => void;
+  payoutMethods: PayoutMethod[];
+  addPayoutMethod: (method: Omit<PayoutMethod, "id" | "userId" | "createdAt">) => void;
+  removePayoutMethod: (id: string) => void;
+  setDefaultPayoutMethod: (id: string) => void;
   kycQueue: KYCSubmission[];
   submitKYC: (data: { documentType: "passport" | "aadhaar" | "driving_license" | "national_id"; documentNumber: string; country: string; idPhotoUrl: string; selfieUrl: string }) => void;
   approveKYC: (id: string) => void;
@@ -96,10 +114,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
   const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [payoutMethods, setPayoutMethods] = useState<PayoutMethod[]>([]);
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [kycQueue, setKycQueue] = useState<KYCSubmission[]>(INITIAL_KYC_QUEUE);
   const [flaggedMessages, setFlaggedMessages] = useState<FlaggedMessageRecord[]>(INITIAL_FLAGGED_MESSAGES);
+
+  // Sync notifications and payout methods when user logs in/changes
+  useEffect(() => {
+    if (!currentUser) {
+      setNotifications([]);
+      setPayoutMethods([]);
+      return;
+    }
+    fetchCloudNotifications(currentUser.id).then((cloudNotifs) => {
+      if (cloudNotifs) setNotifications(cloudNotifs);
+    });
+    fetchPayoutMethodsFromCloud(currentUser.id).then((cloudMethods) => {
+      if (cloudMethods) setPayoutMethods(cloudMethods);
+    });
+  }, [currentUser]);
 
   // Supabase Auth Session Sync
   useEffect(() => {
@@ -244,6 +279,57 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setActiveRole(prev => (prev === "traveler" ? "host" : "traveler"));
   };
 
+  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+
+  const addNotification = (notifData: Omit<AppNotification, "id" | "createdAt">) => {
+    const newNotif: AppNotification = {
+      ...notifData,
+      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      createdAt: "Just now"
+    };
+    setNotifications(prev => [newNotif, ...prev]);
+    saveNotificationToCloud(newNotif);
+  };
+
+  const markNotificationAsRead = (id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    markNotificationAsReadInCloud(id);
+  };
+
+  const markAllNotificationsAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    if (currentUser) {
+      markAllNotificationsAsReadInCloud(currentUser.id);
+    }
+  };
+
+  const addPayoutMethod = (data: Omit<PayoutMethod, "id" | "userId" | "createdAt">) => {
+    if (!currentUser) return;
+    const newMethod: PayoutMethod = {
+      ...data,
+      id: `payout-${Date.now()}`,
+      userId: currentUser.id,
+      isDefault: payoutMethods.length === 0 ? true : data.isDefault,
+      createdAt: new Date().toISOString()
+    };
+    setPayoutMethods(prev => {
+      if (newMethod.isDefault) {
+        return [newMethod, ...prev.map(m => ({ ...m, isDefault: false }))];
+      }
+      return [...prev, newMethod];
+    });
+    savePayoutMethodToCloud(newMethod);
+  };
+
+  const removePayoutMethod = (id: string) => {
+    setPayoutMethods(prev => prev.filter(m => m.id !== id));
+    deletePayoutMethodFromCloud(id);
+  };
+
+  const setDefaultPayoutMethod = (id: string) => {
+    setPayoutMethods(prev => prev.map(m => ({ ...m, isDefault: m.id === id })));
+  };
+
   const setCurrency = (curr: "USD" | "INR") => {
     setCurrencyState(curr);
   };
@@ -294,6 +380,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // Broadcast and save to Supabase Cloud
     saveMessageToCloud(newMessage);
+
+    if (receiverId && receiverId !== "unknown" && receiverId !== sender.id) {
+      addNotification({
+        userId: receiverId,
+        type: "new_message",
+        title: `Message from ${sender.name}`,
+        message: check.sanitizedText.slice(0, 60) + (check.sanitizedText.length > 60 ? "..." : ""),
+        link: "/messages",
+        read: false
+      });
+    }
 
     setConversations(prev =>
       prev.map(c =>
@@ -375,11 +472,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setBookingRequests(prev => [newRequest, ...prev]);
     saveBookingToCloud(newRequest);
+
+    addNotification({
+      userId: listing.hostId,
+      type: "booking_request",
+      title: "New Booking Request",
+      message: `${user.name} requested to book "${listing.title}"`,
+      link: "/host/dashboard",
+      read: false
+    });
+
     return newRequest;
   };
 
   const respondToBookingRequest = (requestId: string, status: "accepted" | "declined") => {
     const contactUnlocked = status === "accepted";
+    const targetReq = bookingRequests.find(r => r.id === requestId);
     setBookingRequests(prev =>
       prev.map(r =>
         r.id === requestId
@@ -388,6 +496,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       )
     );
     updateCloudBookingStatus(requestId, status, contactUnlocked);
+
+    if (targetReq) {
+      addNotification({
+        userId: targetReq.applicantId,
+        type: status === "accepted" ? "booking_accepted" : "booking_declined",
+        title: status === "accepted" ? "Booking Confirmed! 🎉" : "Booking Declined",
+        message: status === "accepted"
+          ? `Your stay at "${targetReq.listingTitle}" is confirmed! Exact location is unlocked.`
+          : `Host was unable to accept your request for "${targetReq.listingTitle}".`,
+        link: "/trips",
+        read: false
+      });
+    }
   };
 
   const toggleListingStatus = (listingId: string) => {
@@ -461,6 +582,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     setReviews(prev => [newReview, ...prev]);
     saveReviewToCloud(newReview);
+
+    addNotification({
+      userId: data.hostId,
+      type: "new_review",
+      title: "New Review Received ⭐",
+      message: `${user.name} left a ${data.rating}-star review for "${data.listingTitle || "your experience"}"!`,
+      link: `/profile/${data.hostId}`,
+      read: false
+    });
+
     return newReview;
   };
 
@@ -511,6 +642,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         bookingRequests,
         createBookingRequest,
         respondToBookingRequest,
+        notifications,
+        unreadNotificationsCount,
+        addNotification,
+        markNotificationAsRead,
+        markAllNotificationsAsRead,
+        payoutMethods,
+        addPayoutMethod,
+        removePayoutMethod,
+        setDefaultPayoutMethod,
         kycQueue,
         submitKYC,
         approveKYC,

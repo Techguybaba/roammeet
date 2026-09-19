@@ -141,3 +141,37 @@ export interface Review {
   comment: string;
   createdAt: string;
 }
+
+export interface PayoutMethod {
+  id: string;
+  userId: string;
+  type: "upi" | "bank" | "paypal";
+  isDefault: boolean;
+  upiId?: string;
+  accountHolderName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  bankName?: string;
+  paypalEmail?: string;
+  createdAt: string;
+}
+
+export interface HostEarningsSummary {
+  totalGrossVolume: number;
+  platformFeesDeducted: number;
+  netEarnings: number;
+  availableBalance: number;
+  pendingPayouts: number;
+  completedPayouts: number;
+}
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: "booking_request" | "booking_accepted" | "booking_declined" | "new_review" | "new_message" | "payout_processed";
+  title: string;
+  message: string;
+  link: string;
+  read: boolean;
+  createdAt: string;
+}
