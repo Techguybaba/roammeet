@@ -215,7 +215,24 @@ export async function fetchCloudListings(): Promise<Listing[] | null> {
 
     if (error || !data || data.length === 0) return null;
 
-    const items = data as unknown as DbListingItem[];
+    const DUMMY_LISTING_IDS = new Set([
+      "listing-california-stay",
+      "listing-london-eye-buddy",
+      "listing-mumbai-rooftop-party",
+      "listing-tokyo-food-crawl",
+      "listing-1789735511818"
+    ]);
+
+    const items = (data as unknown as DbListingItem[]).filter(item => 
+      !DUMMY_LISTING_IDS.has(item.id) &&
+      !item.id.startsWith("listing-california-") &&
+      !item.id.startsWith("listing-london-") &&
+      !item.id.startsWith("listing-mumbai-") &&
+      !item.id.startsWith("listing-tokyo-")
+    );
+
+    if (items.length === 0) return [];
+
     return items.map((item) => {
       const hostData = item.profiles;
       const hostUser: AppUser = hostData ? {

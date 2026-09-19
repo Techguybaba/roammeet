@@ -14,7 +14,6 @@ import {
 import { 
   CURRENT_USER, 
   INITIAL_LISTINGS, 
-  INITIAL_CONVERSATIONS, 
   INITIAL_KYC_QUEUE, 
   INITIAL_FLAGGED_MESSAGES 
 } from "@/lib/mock-data";
@@ -93,83 +92,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeRole, setActiveRole] = useState<"traveler" | "host">("traveler");
   const [currency, setCurrencyState] = useState<"USD" | "INR">("USD");
   const [listings, setListings] = useState<Listing[]>(INITIAL_LISTINGS);
-  const [conversations, setConversations] = useState<Conversation[]>(INITIAL_CONVERSATIONS);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>("conv-sarah-london-eye");
-  
-  // Seed initial messages
-  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({
-    "conv-sarah-london-eye": [
-      {
-        id: "m-1",
-        conversationId: "conv-sarah-london-eye",
-        senderId: "user-rohit-01",
-        senderName: "Rohit Sharma",
-        senderAvatar: CURRENT_USER.avatar,
-        receiverId: "user-sarah-london",
-        text: "Hi Sarah! I'm in London today and would love to join your London Eye walk at 4 PM.",
-        isMasked: false,
-        detectedTypes: [],
-        timestamp: "25 mins ago"
-      },
-      {
-        id: "m-2",
-        conversationId: "conv-sarah-london-eye",
-        senderId: "user-sarah-london",
-        senderName: "Sarah Jenkins",
-        senderAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
-        receiverId: "user-rohit-01",
-        text: "Awesome! I'll be waiting by the Riverside Green garden near the London Eye at 4:00 PM. Looking forward to meeting you!",
-        isMasked: false,
-        detectedTypes: [],
-        timestamp: "10 mins ago"
-      }
-    ],
-    "conv-david-california-stay": [
-      {
-        id: "m-3",
-        conversationId: "conv-david-california-stay",
-        senderId: "user-rohit-01",
-        senderName: "Rohit Sharma",
-        senderAvatar: CURRENT_USER.avatar,
-        receiverId: "user-david-cali",
-        text: "Hey David, your Venice Beach studio looks stunning! Does it have a good desk for remote work?",
-        isMasked: false,
-        detectedTypes: [],
-        timestamp: "2 hours ago"
-      },
-      {
-        id: "m-4",
-        conversationId: "conv-david-california-stay",
-        senderId: "user-david-cali",
-        senderName: "David Miller",
-        senderAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
-        receiverId: "user-rohit-01",
-        text: "Hello Rohit! Yes, the Venice studio has an ergonomic desk and 500 Mbps Wi-Fi. Feel free to send the booking request via the platform so I can lock it in for you.",
-        isMasked: false,
-        detectedTypes: [],
-        timestamp: "1 hour ago"
-      }
-    ]
-  });
-
-  const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>([
-    {
-      id: "book-01",
-      listingId: "listing-california-stay",
-      listingTitle: "Chic Guest Studio near Venice Beach Pier",
-      category: "stay",
-      applicantId: CURRENT_USER.id,
-      applicant: CURRENT_USER,
-      hostId: "user-david-cali",
-      status: "pending",
-      dates: "Sep 22 - Sep 25, 2026 (3 nights)",
-      totalAmount: 135,
-      platformFee: 1.00,
-      message: "Looking forward to working remotely from Venice Beach!",
-      createdAt: "1 hour ago",
-      contactUnlocked: false
-    }
-  ]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
+  const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>([]);
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [kycQueue, setKycQueue] = useState<KYCSubmission[]>(INITIAL_KYC_QUEUE);
