@@ -449,7 +449,7 @@ export default function ListingDetailPage() {
                       >
                         -
                       </button>
-                      <span className="flex-1 text-center text-xs font-bold">{bookingNights} nights</span>
+                      <span className="flex-1 text-center text-xs font-bold text-slate-900">{bookingNights} nights</span>
                       <button
                         type="button"
                         onClick={() => setBookingNights(bookingNights + 1)}
@@ -491,7 +491,7 @@ export default function ListingDetailPage() {
                         value={bookingMessage}
                         onChange={(e) => setBookingMessage(e.target.value)}
                         placeholder="Introduce yourself, your arrival timing, or any questions..."
-                        className="w-full border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                        className="w-full border border-slate-300 rounded-xl p-3 text-xs text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
                         required
                       />
                     </div>

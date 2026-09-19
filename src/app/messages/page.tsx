@@ -351,7 +351,7 @@ export default function MessagesPage() {
                 value={inputMsg}
                 onChange={(e) => setInputMsg(e.target.value)}
                 placeholder="Type your message... (phone numbers & social links are protected)"
-                className="flex-1 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                className="flex-1 border border-slate-300 rounded-2xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
               />
               <button
                 type="submit"
