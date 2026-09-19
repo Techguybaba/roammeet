@@ -29,6 +29,7 @@ import {
   fetchCloudBookings,
   updateCloudBookingStatus,
   updateCloudListingStatus,
+  updateProfileInCloud,
   saveMessageToCloud,
   subscribeToRealtimeMessages
 } from "@/lib/supabase";
@@ -44,6 +45,7 @@ interface AppContextType {
   setRealUser: (user: User | null) => void;
   loginAsDemoUser: () => void;
   logout: () => Promise<void>;
+  updateUserProfile: (updates: Partial<User>) => void;
   activeRole: "traveler" | "host";
   toggleRole: () => void;
   currency: "USD" | "INR";
@@ -293,6 +295,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentUser(null);
   };
 
+  const updateUserProfile = (updates: Partial<User>) => {
+    if (!currentUser) return;
+    const updated = { ...currentUser, ...updates };
+    setCurrentUser(updated);
+    updateProfileInCloud(currentUser.id, updates);
+  };
+
   const toggleRole = () => {
     setActiveRole(prev => (prev === "traveler" ? "host" : "traveler"));
   };
@@ -518,6 +527,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setRealUser,
         loginAsDemoUser,
         logout,
+        updateUserProfile,
         activeRole,
         toggleRole,
         currency,

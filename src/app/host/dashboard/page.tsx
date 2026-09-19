@@ -327,16 +327,19 @@ export default function HostDashboardPage() {
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                     {/* Traveler Info */}
-                    <div className="flex items-start gap-3">
+                    <Link 
+                      href={`/profile/${request.applicant.id}`}
+                      className="flex items-start gap-3 hover:opacity-90 transition group"
+                    >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img 
                         src={request.applicant.avatar} 
                         alt={request.applicant.name} 
-                        className="w-12 h-12 rounded-full object-cover ring-2 ring-indigo-100 shrink-0" 
+                        className="w-12 h-12 rounded-full object-cover ring-2 ring-indigo-100 group-hover:ring-indigo-300 transition shrink-0" 
                       />
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="font-extrabold text-base text-slate-900">
+                          <h4 className="font-extrabold text-base text-slate-900 group-hover:text-indigo-600 transition">
                             {request.applicant.name}
                           </h4>
                           <VerificationBadge tier={request.applicant.verificationTier} />
@@ -345,7 +348,7 @@ export default function HostDashboardPage() {
                           {request.applicant.city}, {request.applicant.country} • Member since {request.applicant.joinedDate}
                         </p>
                       </div>
-                    </div>
+                    </Link>
 
                     {/* Status Badge */}
                     <div>

@@ -211,16 +211,19 @@ export default function MessagesPage() {
             
             {/* Chat Header */}
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-white z-10">
-              <div className="flex items-center gap-3">
+              <Link 
+                href={`/profile/${activeConv.otherUser.id}`}
+                className="flex items-center gap-3 hover:opacity-90 transition group"
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={activeConv.otherUser.avatar}
                   alt={activeConv.otherUser.name}
-                  className="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-500/20"
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-500/20 group-hover:ring-indigo-500/40 transition"
                 />
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-extrabold text-slate-900">
+                    <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-indigo-600 transition">
                       {activeConv.otherUser.name}
                     </h3>
                     <VerificationBadge tier={activeConv.otherUser.verificationTier} size="sm" />
@@ -229,7 +232,7 @@ export default function MessagesPage() {
                     ⭐ {activeConv.otherUser.rating} ({activeConv.otherUser.reviewCount} reviews) • {activeConv.otherUser.city}
                   </span>
                 </div>
-              </div>
+              </Link>
 
               {activeConv.listing && (
                 <Link

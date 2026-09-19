@@ -220,7 +220,7 @@ export function Navbar() {
             {currentUser ? (
               <div className="flex items-center gap-2">
                 <Link
-                  href="/profile/verification"
+                  href="/profile"
                   className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full bg-gray-50 border border-gray-200 hover:border-indigo-300 transition-all group"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -282,14 +282,18 @@ export function Navbar() {
         <div className="md:hidden border-t border-gray-200 bg-white px-4 pt-3 pb-4 space-y-2 shadow-lg">
           {currentUser ? (
             <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-              <div className="flex items-center gap-2">
+              <Link 
+                href="/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 hover:opacity-80 transition"
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={currentUser.avatar} alt={currentUser.name} className="w-8 h-8 rounded-full" />
                 <div>
                   <div className="text-xs font-bold text-gray-800">{currentUser.name}</div>
-                  <div className="text-[10px] text-emerald-600 font-semibold">Tier {currentUser.verificationTier} Verified</div>
+                  <div className="text-[10px] text-emerald-600 font-semibold">Tier {currentUser.verificationTier} Verified • View Profile</div>
                 </div>
-              </div>
+              </Link>
               <button
                 onClick={logout}
                 className="text-xs font-bold text-rose-600 hover:underline"

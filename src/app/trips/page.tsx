@@ -252,7 +252,10 @@ export default function MyTripsPage() {
 
                       <div>
                         <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Host Details</span>
-                        <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                        <Link 
+                          href={`/profile/${trip.hostId}`}
+                          className="inline-flex items-center gap-1.5 font-bold text-slate-800 hover:text-indigo-600 transition"
+                        >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={listing?.host.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=host"}
@@ -261,7 +264,7 @@ export default function MyTripsPage() {
                           />
                           <span>{listing?.host.name || "Verified Host"}</span>
                           {listing?.host && <VerificationBadge tier={listing.host.verificationTier} />}
-                        </div>
+                        </Link>
                       </div>
                     </div>
 

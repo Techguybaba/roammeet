@@ -241,16 +241,20 @@ export default function ListingDetailPage() {
 
           {/* Host Profile Card */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4">
+            <Link 
+              href={`/profile/${listing.hostId || listing.host.id}`}
+              className="flex items-center gap-4 hover:opacity-90 transition group"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={listing.host.avatar}
                 alt={listing.host.name}
-                className="w-14 h-14 rounded-full object-cover ring-4 ring-indigo-500/10"
+                className="w-14 h-14 rounded-full object-cover ring-4 ring-indigo-500/10 group-hover:ring-indigo-500/30 transition shrink-0"
               />
               <div>
-                <h3 className="text-base font-extrabold text-slate-900">
-                  Hosted by {listing.host.name}
+                <h3 className="text-base font-extrabold text-slate-900 group-hover:text-indigo-600 transition flex items-center gap-1.5">
+                  <span>Hosted by {listing.host.name}</span>
+                  <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-md">View Profile →</span>
                 </h3>
                 <div className="flex items-center gap-2 mt-1">
                   <VerificationBadge tier={listing.host.verificationTier} />
@@ -262,7 +266,7 @@ export default function ListingDetailPage() {
                   {listing.host.bio}
                 </p>
               </div>
-            </div>
+            </Link>
 
             <button
               onClick={handleStartChat}

@@ -136,6 +136,27 @@ export async function fetchProfileFromCloud(userId: string): Promise<AppUser | n
   };
 }
 
+/**
+ * Update user profile in Supabase Cloud
+ */
+export async function updateProfileInCloud(userId: string, updates: Partial<AppUser>) {
+  if (!supabase) return;
+  try {
+    const payload: Record<string, unknown> = {};
+    if (updates.name !== undefined) payload.name = updates.name;
+    if (updates.bio !== undefined) payload.bio = updates.bio;
+    if (updates.city !== undefined) payload.city = updates.city;
+    if (updates.country !== undefined) payload.country = updates.country;
+    if (updates.phone !== undefined) payload.phone = updates.phone;
+    if (updates.avatar !== undefined) payload.avatar_url = updates.avatar;
+    if (updates.isHost !== undefined) payload.is_host = updates.isHost;
+
+    await supabase.from("profiles").update(payload).eq("id", userId);
+  } catch (err) {
+    console.error("Failed to update profile in cloud:", err);
+  }
+}
+
 interface DbListingItem {
   id: string;
   host_id: string;
