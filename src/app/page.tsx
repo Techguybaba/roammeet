@@ -243,7 +243,26 @@ export default function HomePage() {
         </div>
 
         {/* Listings Feed Grid */}
-        {filteredListings.length === 0 ? (
+        {listings.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center max-w-lg mx-auto shadow-sm space-y-4">
+            <div className="w-16 h-16 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+              <PlusCircle className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-xl font-extrabold text-slate-900">Be the First to Host</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                No listings published yet on the live feed. Be the first to share your homestay, travel companion meetup, or local activity!
+              </p>
+            </div>
+            <Link
+              href="/host/create"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition hover:scale-105"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>+ Host a Stay or Plan</span>
+            </Link>
+          </div>
+        ) : filteredListings.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-md mx-auto">
             <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto text-indigo-600 mb-4">
               <Search className="w-8 h-8" />

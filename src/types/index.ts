@@ -123,3 +123,21 @@ export interface FlaggedMessageRecord {
   timestamp: string;
   status: "blocked" | "reviewed";
 }
+
+export interface Review {
+  id: string;
+  listingId: string;
+  listingTitle?: string;
+  hostId: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string;
+  authorTier: VerificationTier;
+  rating: number;
+  cleanliness?: number;
+  accuracy?: number;
+  communication?: number;
+  value?: number;
+  comment: string;
+  createdAt: string;
+}

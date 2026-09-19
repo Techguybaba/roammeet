@@ -16,8 +16,10 @@ import {
   ArrowLeft, 
   Info, 
   Share2,
-  Home
+  Home,
+  Star
 } from "lucide-react";
+import { ReviewModal } from "@/components/reviews/ReviewModal";
 
 export default function ListingDetailPage() {
   const params = useParams();
@@ -32,7 +34,8 @@ export default function ListingDetailPage() {
     currencySymbol, 
     startConversationWithHost, 
     createBookingRequest,
-    bookingRequests 
+    bookingRequests,
+    getListingReviews
   } = useApp();
 
   const listing = listings.find((l) => l.id === listingId);
@@ -41,6 +44,7 @@ export default function ListingDetailPage() {
   const [bookingMessage, setBookingMessage] = useState("");
   const [showBookingSuccess, setShowBookingSuccess] = useState(false);
   const [bookingNights, setBookingNights] = useState(2);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   if (!listing) {
     return (
@@ -57,6 +61,11 @@ export default function ListingDetailPage() {
   const isTravelBuddy = listing.category === "travel_buddy";
   const isStay = listing.category === "stay";
   const isFree = listing.priceAmount === 0;
+
+  const listingReviews = getListingReviews(listing.id);
+  const averageRating = listingReviews.length > 0 
+    ? listingReviews.reduce((acc, r) => acc + r.rating, 0) / listingReviews.length 
+    : (listing.host.rating || 5.0);
 
   // Platform Fee calculation ($1 or ₹79 flat, or 0 for travel buddy)
   const platformFee = isTravelBuddy 
@@ -335,6 +344,79 @@ export default function ListingDetailPage() {
             </ul>
           </div>
 
+          {/* Community Reviews & Ratings Section */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 bg-amber-50 text-amber-900 px-3 py-1 rounded-xl font-black text-lg border border-amber-200">
+                  <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+                  <span>{listingReviews.length > 0 ? averageRating.toFixed(1) : "New"}</span>
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    Guest Reviews
+                  </h3>
+                  <span className="text-xs text-slate-500">
+                    {listingReviews.length} {listingReviews.length === 1 ? "verified review" : "verified reviews"}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  if (!currentUser) {
+                    openAuthModal("Sign in to write a review for this stay");
+                    return;
+                  }
+                  setIsReviewModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200 transition cursor-pointer"
+              >
+                <Star className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Leave a Review</span>
+              </button>
+            </div>
+
+            {listingReviews.length === 0 ? (
+              <div className="text-center py-6 text-xs text-slate-500 space-y-2">
+                <p>No reviews yet for this experience.</p>
+                <p className="text-slate-400">Be the first verified traveler to stay and share your feedback!</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {listingReviews.map(rev => (
+                  <div key={rev.id} className="bg-slate-50/70 p-4 rounded-2xl space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={rev.authorAvatar} 
+                          alt={rev.authorName} 
+                          className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200" 
+                        />
+                        <div>
+                          <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                            <span>{rev.authorName}</span>
+                            <VerificationBadge tier={rev.authorTier} size="sm" />
+                          </div>
+                          <div className="text-[10px] text-slate-400">{rev.createdAt}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center text-amber-500">
+                        {[...Array(rev.rating)].map((_, i) => (
+                          <Star key={i} className="w-3.5 h-3.5 fill-amber-500" />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-slate-700 leading-relaxed">
+                      &ldquo;{rev.comment}&rdquo;
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
         </div>
 
         {/* Right Sticky Booking Box */}
@@ -582,6 +664,15 @@ export default function ListingDetailPage() {
         </div>
 
       </div>
+
+      <ReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        listingId={listing.id}
+        listingTitle={listing.title}
+        hostId={listing.hostId || listing.host.id}
+        hostName={listing.host.name}
+      />
 
     </div>
   );

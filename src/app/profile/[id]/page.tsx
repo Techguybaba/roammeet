@@ -33,7 +33,8 @@ export default function PublicProfilePage() {
     listings, 
     startConversationWithHost, 
     updateUserProfile,
-    currencySymbol 
+    currencySymbol,
+    getHostReviews
   } = useApp();
 
   const [profileUser, setProfileUser] = useState<User | null>(null);
@@ -130,6 +131,13 @@ export default function PublicProfilePage() {
     l.host.id === profileUser.id ||
     (profileUser.email && l.host.email && profileUser.email.toLowerCase() === l.host.email.toLowerCase())
   );
+
+  // Dynamic host reviews & rating calculation
+  const hostReviews = getHostReviews(profileUser.id);
+  const liveRating = hostReviews.length > 0 
+    ? (hostReviews.reduce((acc, r) => acc + r.rating, 0) / hostReviews.length).toFixed(1)
+    : profileUser.rating;
+  const liveReviewCount = hostReviews.length > 0 ? hostReviews.length : profileUser.reviewCount;
 
   const handleMessage = () => {
     startConversationWithHost(profileUser);
@@ -232,7 +240,7 @@ export default function PublicProfilePage() {
                   <span>Rating</span>
                 </div>
                 <div className="font-extrabold text-sm text-slate-900 mt-0.5">
-                  {profileUser.rating} <span className="text-[10px] text-slate-400 font-normal">({profileUser.reviewCount})</span>
+                  {liveRating} <span className="text-[10px] text-slate-400 font-normal">({liveReviewCount})</span>
                 </div>
               </div>
 
@@ -431,7 +439,7 @@ export default function PublicProfilePage() {
               <div className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
                 <h3 className="text-base font-extrabold text-slate-900">
-                  {profileUser.rating} • {profileUser.reviewCount} Community Reviews
+                  {liveRating} • {liveReviewCount} Community Reviews
                 </h3>
               </div>
               <span className="text-xs text-emerald-600 font-bold flex items-center gap-1">
@@ -440,47 +448,46 @@ export default function PublicProfilePage() {
               </span>
             </div>
 
-            <div className="space-y-4">
-              {[
-                {
-                  id: "rev-1",
-                  name: "Elena Rostova",
-                  avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80",
-                  date: "August 2026",
-                  rating: 5,
-                  comment: "Wonderful host! The stay was spotless, exactly as described, and the neighborhood tips made my trip unforgettable. Highly recommended!"
-                },
-                {
-                  id: "rev-2",
-                  name: "Marcus Chen",
-                  avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&auto=format&fit=crop&q=80",
-                  date: "July 2026",
-                  rating: 5,
-                  comment: "Super friendly and quick to respond. The check-in was seamless and having a verified host gave me complete peace of mind."
-                }
-              ].map(rev => (
-                <div key={rev.id} className="bg-slate-50/70 p-4 rounded-2xl space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={rev.avatar} alt={rev.name} className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200" />
-                      <div>
-                        <div className="font-bold text-slate-900">{rev.name}</div>
-                        <div className="text-[10px] text-slate-400">{rev.date}</div>
+            {hostReviews.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+                <Star className="w-8 h-8 text-slate-300 mx-auto" />
+                <div className="text-xs font-bold text-slate-700">No reviews yet</div>
+                <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                  Reviews from verified guests and companions will appear here once stays or experiences are completed.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {hostReviews.map(rev => (
+                  <div key={rev.id} className="bg-slate-50/70 p-4 rounded-2xl space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={rev.authorAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(rev.authorName)}`} 
+                          alt={rev.authorName} 
+                          className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200" 
+                        />
+                        <div>
+                          <div className="font-bold text-slate-900">{rev.authorName}</div>
+                          <div className="text-[10px] text-slate-400">
+                            {new Date(rev.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center text-amber-500">
+                        {[...Array(rev.rating)].map((_, i) => (
+                          <Star key={i} className="w-3.5 h-3.5 fill-amber-500" />
+                        ))}
                       </div>
                     </div>
-                    <div className="flex items-center text-amber-500">
-                      {[...Array(rev.rating)].map((_, i) => (
-                        <Star key={i} className="w-3.5 h-3.5 fill-amber-500" />
-                      ))}
-                    </div>
+                    <p className="text-slate-600 leading-relaxed">
+                      &ldquo;{rev.comment}&rdquo;
+                    </p>
                   </div>
-                  <p className="text-slate-600 leading-relaxed">
-                    &ldquo;{rev.comment}&rdquo;
-                  </p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>

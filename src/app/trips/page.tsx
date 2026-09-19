@@ -18,9 +18,11 @@ import {
   ShieldCheck,
   Lock,
   Download,
-  X
+  X,
+  Star
 } from "lucide-react";
 import { BookingRequest } from "@/types";
+import { ReviewModal } from "@/components/reviews/ReviewModal";
 
 export default function MyTripsPage() {
   const router = useRouter();
@@ -36,6 +38,7 @@ export default function MyTripsPage() {
 
   const [activeFilter, setActiveFilter] = useState<"all" | "confirmed" | "pending" | "declined">("all");
   const [selectedReceipt, setSelectedReceipt] = useState<BookingRequest | null>(null);
+  const [selectedReviewTrip, setSelectedReviewTrip] = useState<BookingRequest | null>(null);
 
   // Authentication Guard
   if (!currentUser) {
@@ -310,6 +313,16 @@ export default function MyTripsPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {isConfirmed && (
+                        <button
+                          onClick={() => setSelectedReviewTrip(trip)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold transition cursor-pointer"
+                        >
+                          <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                          <span>Review Stay</span>
+                        </button>
+                      )}
+
                       <button
                         onClick={() => setSelectedReceipt(trip)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold transition cursor-pointer"
@@ -428,6 +441,18 @@ export default function MyTripsPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Review Stay Modal */}
+      {selectedReviewTrip && (
+        <ReviewModal
+          isOpen={!!selectedReviewTrip}
+          onClose={() => setSelectedReviewTrip(null)}
+          listingId={selectedReviewTrip.listingId}
+          listingTitle={selectedReviewTrip.listingTitle}
+          hostId={selectedReviewTrip.hostId}
+          hostName={listings.find(l => l.id === selectedReviewTrip.listingId)?.host.name || "Host"}
+        />
       )}
 
     </div>

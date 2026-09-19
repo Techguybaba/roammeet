@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { User as AppUser, Listing, BookingRequest, ChatMessage } from "@/types";
+import { User as AppUser, Listing, BookingRequest, ChatMessage, Review, VerificationTier } from "@/types";
 import { MOCK_USERS, CURRENT_USER } from "@/lib/mock-data";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -452,6 +452,88 @@ export async function updateCloudListingStatus(
     }).eq("id", listingId);
   } catch (err) {
     console.error("Failed to update listing status in cloud:", err);
+  }
+}
+
+/**
+ * Save review to Supabase Cloud
+ */
+export async function saveReviewToCloud(review: Review) {
+  if (!supabase) return;
+  try {
+    await supabase.from("reviews").insert({
+      id: review.id,
+      listing_id: review.listingId,
+      listing_title: review.listingTitle,
+      host_id: review.hostId,
+      author_id: review.authorId,
+      author_name: review.authorName,
+      author_avatar: review.authorAvatar,
+      author_tier: review.authorTier,
+      rating: review.rating,
+      cleanliness: review.cleanliness,
+      accuracy: review.accuracy,
+      communication: review.communication,
+      value: review.value,
+      comment: review.comment
+    });
+  } catch (err) {
+    console.error("Failed to save review to cloud:", err);
+  }
+}
+
+interface DbReviewItem {
+  id: string;
+  listing_id: string;
+  listing_title?: string;
+  host_id: string;
+  author_id: string;
+  author_name: string;
+  author_avatar?: string;
+  author_tier?: number;
+  rating: number;
+  cleanliness?: number;
+  accuracy?: number;
+  communication?: number;
+  value?: number;
+  comment: string;
+  created_at?: string;
+}
+
+/**
+ * Fetch reviews from Supabase Cloud
+ */
+export async function fetchCloudReviews(): Promise<Review[] | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from("reviews")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error || !data) return null;
+
+    const items = data as unknown as DbReviewItem[];
+    return items.map((item) => ({
+      id: item.id,
+      listingId: item.listing_id,
+      listingTitle: item.listing_title,
+      hostId: item.host_id,
+      authorId: item.author_id,
+      authorName: item.author_name,
+      authorAvatar: item.author_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(item.author_name)}`,
+      authorTier: ((item.author_tier ?? 1) as VerificationTier),
+      rating: Number(item.rating) || 5,
+      cleanliness: item.cleanliness ? Number(item.cleanliness) : undefined,
+      accuracy: item.accuracy ? Number(item.accuracy) : undefined,
+      communication: item.communication ? Number(item.communication) : undefined,
+      value: item.value ? Number(item.value) : undefined,
+      comment: item.comment,
+      createdAt: item.created_at ? new Date(item.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "Recently"
+    }));
+  } catch (err) {
+    console.error("Failed to fetch cloud reviews:", err);
+    return null;
   }
 }
 

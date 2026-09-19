@@ -8,7 +8,8 @@ import {
   Conversation, 
   ChatMessage, 
   KYCSubmission, 
-  FlaggedMessageRecord 
+  FlaggedMessageRecord,
+  Review
 } from "@/types";
 import { 
   CURRENT_USER, 
@@ -30,6 +31,8 @@ import {
   updateCloudBookingStatus,
   updateCloudListingStatus,
   updateProfileInCloud,
+  saveReviewToCloud,
+  fetchCloudReviews,
   saveMessageToCloud,
   subscribeToRealtimeMessages
 } from "@/lib/supabase";
@@ -46,6 +49,10 @@ interface AppContextType {
   loginAsDemoUser: () => void;
   logout: () => Promise<void>;
   updateUserProfile: (updates: Partial<User>) => void;
+  reviews: Review[];
+  addReview: (review: Omit<Review, "id" | "authorId" | "authorName" | "authorAvatar" | "authorTier" | "createdAt">) => Review;
+  getListingReviews: (listingId: string) => Review[];
+  getHostReviews: (hostId: string) => Review[];
   activeRole: "traveler" | "host";
   toggleRole: () => void;
   currency: "USD" | "INR";
@@ -164,6 +171,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   ]);
 
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [kycQueue, setKycQueue] = useState<KYCSubmission[]>(INITIAL_KYC_QUEUE);
   const [flaggedMessages, setFlaggedMessages] = useState<FlaggedMessageRecord[]>(INITIAL_FLAGGED_MESSAGES);
 
@@ -236,17 +244,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // 1. Fetch live listings and bookings from Supabase cloud
+  // 1. Fetch live listings, bookings, and reviews from Supabase cloud
   useEffect(() => {
     fetchCloudListings().then((cloudListings) => {
-      if (cloudListings && cloudListings.length > 0) {
-        setListings(cloudListings);
-      }
+      setListings(cloudListings || []);
     });
 
     fetchCloudBookings().then((cloudBookings) => {
       if (cloudBookings && cloudBookings.length > 0) {
         setBookingRequests(cloudBookings);
+      }
+    });
+
+    fetchCloudReviews().then((cloudReviews) => {
+      if (cloudReviews && cloudReviews.length > 0) {
+        setReviews(cloudReviews);
       }
     });
   }, []);
@@ -510,6 +522,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const addReview = (data: Omit<Review, "id" | "authorId" | "authorName" | "authorAvatar" | "authorTier" | "createdAt">) => {
+    const user = currentUser || CURRENT_USER;
+    const newReview: Review = {
+      ...data,
+      id: `rev-${Date.now()}`,
+      authorId: user.id,
+      authorName: user.name,
+      authorAvatar: user.avatar,
+      authorTier: user.verificationTier,
+      createdAt: "Just now"
+    };
+    setReviews(prev => [newReview, ...prev]);
+    saveReviewToCloud(newReview);
+    return newReview;
+  };
+
+  const getListingReviews = (listingId: string) => {
+    return reviews.filter(r => r.listingId === listingId);
+  };
+
+  const getHostReviews = (hostId: string) => {
+    return reviews.filter(r => r.hostId === hostId);
+  };
+
   // Platform Revenue Stats Calculation
   const totalBookingsCount = bookingRequests.filter(b => b.status === "accepted" || b.status === "pending").length;
   const totalPlatformFees = bookingRequests.reduce((acc, b) => acc + (b.platformFee || 0), 0) + 14.00;
@@ -528,6 +564,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         loginAsDemoUser,
         logout,
         updateUserProfile,
+        reviews,
+        addReview,
+        getListingReviews,
+        getHostReviews,
         activeRole,
         toggleRole,
         currency,
