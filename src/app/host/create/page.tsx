@@ -56,18 +56,30 @@ export default function CreateListingPage() {
       return;
     }
 
+    const defaultTravelBuddyPhotos: Record<string, string> = {
+      London: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800&auto=format&fit=crop&q=80",
+      California: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop&q=80",
+      Mumbai: "https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=800&auto=format&fit=crop&q=80",
+      Tokyo: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800&auto=format&fit=crop&q=80",
+      Paris: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&auto=format&fit=crop&q=80",
+      Goa: "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=800&auto=format&fit=crop&q=80",
+      Bali: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&auto=format&fit=crop&q=80"
+    };
+
+    const finalPhoto = photoUrl || (isTravelBuddy ? (defaultTravelBuddyPhotos[destinationCity] || defaultTravelBuddyPhotos.London) : "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop&q=80");
+
     const amenities = amenitiesInput.split(",").map(s => s.trim()).filter(Boolean);
-    const rules = rulesInput.split(",").map(s => s.trim()).filter(Boolean);
+    const rules = isTravelBuddy ? [] : rulesInput.split(",").map(s => s.trim()).filter(Boolean);
 
     const created = addListing({
       category,
       title: title || (isTravelBuddy ? `Exploring ${locationName || destinationCity} Today!` : `Cozy Stay in ${destinationCity}`),
-      description: description || "Join me for an authentic, verified local experience!",
+      description: description || (isTravelBuddy ? "Looking for friendly travel buddies to explore iconic sights together!" : "Join me for an authentic, verified local experience!"),
       destinationCity,
       country,
       locationName: locationName || `${destinationCity}, ${country}`,
-      addressHint: addressHint || `Near ${destinationCity} center`,
-      exactAddress: exactAddress || `123 Main Street, ${destinationCity} (Locked until booking)`,
+      addressHint: addressHint || (isTravelBuddy ? `Near ${locationName || destinationCity}` : `Near ${destinationCity} center`),
+      exactAddress: exactAddress || (isTravelBuddy ? `Meeting point at ${locationName || destinationCity} (Unlocked upon joining)` : `123 Main Street, ${destinationCity} (Locked until booking)`),
       startDate,
       time: time || undefined,
       pricingType: isTravelBuddy ? "free" : "fixed",
@@ -75,9 +87,9 @@ export default function CreateListingPage() {
       currency,
       platformFee,
       maxParticipants,
-      photos: [photoUrl],
-      amenities: amenities.length ? amenities : ["Verified Host", "Wi-Fi"],
-      rules: rules.length ? rules : ["Keep all communications on RoamMeet"],
+      photos: [finalPhoto],
+      amenities: amenities.length ? amenities : (isTravelBuddy ? ["Sightseeing", "Verified Traveler"] : ["Verified Host", "Wi-Fi"]),
+      rules: isTravelBuddy ? [] : (rules.length ? rules : ["Keep all communications on RoamMeet"]),
       isPromoted: true
     });
 
@@ -229,13 +241,13 @@ export default function CreateListingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">
-                Public Location Hint (Visible to all):
+                {isTravelBuddy ? "Public Landmark Hint (Visible to all):" : "Public Location Hint (Visible to all):"}
               </label>
               <input
                 type="text"
                 value={addressHint}
                 onChange={(e) => setAddressHint(e.target.value)}
-                placeholder="e.g. Within 500m of London Eye entrance"
+                placeholder={isTravelBuddy ? "e.g. Near London Eye entrance / South Bank" : "e.g. Within 500m of London Eye entrance"}
                 className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500"
                 required
               />
@@ -243,13 +255,13 @@ export default function CreateListingPage() {
 
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">
-                Exact Street Address (Locked until confirmed booking):
+                {isTravelBuddy ? "Exact Meeting Point (Unlocked upon joining):" : "Exact Street Address (Locked until confirmed booking):"}
               </label>
               <input
                 type="text"
                 value={exactAddress}
                 onChange={(e) => setExactAddress(e.target.value)}
-                placeholder="e.g. Apt 4B, 108 Ocean View Drive, CA 90291"
+                placeholder={isTravelBuddy ? "e.g. Riverside Green garden bench #3 by London Eye" : "e.g. Apt 4B, 108 Ocean View Drive, CA 90291"}
                 className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500"
                 required
               />
@@ -385,17 +397,20 @@ export default function CreateListingPage() {
         {/* Step 5: Photo & Extra Guidelines */}
         <div className="space-y-4 pt-6 border-t border-slate-100">
           <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">
-            Step 5: Photos & House Rules
+            {isTravelBuddy ? "Step 5: Landmark Photo & Meetup Details" : "Step 5: Photos & House Rules"}
           </label>
 
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">Cover Photo URL:</label>
+            <label className="text-xs font-bold text-slate-700 block mb-1">
+              {isTravelBuddy ? "Landmark Photo URL (Optional — auto-filled if empty):" : "Cover Photo URL:"}
+            </label>
             <input
               type="url"
               value={photoUrl}
               onChange={(e) => setPhotoUrl(e.target.value)}
+              placeholder={isTravelBuddy ? "Leave empty to use scenic landmark photo automatically" : "https://images.unsplash.com/..."}
               className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500"
-              required
+              required={!isTravelBuddy}
             />
             {photoUrl && (
               <div className="mt-2 h-28 w-44 rounded-xl overflow-hidden border border-slate-200">
@@ -407,27 +422,31 @@ export default function CreateListingPage() {
 
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">
-              Amenities / Highlights (comma separated):
+              {isTravelBuddy ? "Meetup Activities / Vibe (comma separated):" : "Amenities / Highlights (comma separated):"}
             </label>
             <input
               type="text"
               value={amenitiesInput}
               onChange={(e) => setAmenitiesInput(e.target.value)}
+              placeholder={isTravelBuddy ? "e.g. Sightseeing, Photography, Coffee, English speaking" : "e.g. Wi-Fi, Kitchen, Workspace"}
               className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
-          <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">
-              Guidelines / Rules (comma separated):
-            </label>
-            <input
-              type="text"
-              value={rulesInput}
-              onChange={(e) => setRulesInput(e.target.value)}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
+          {!isTravelBuddy && (
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">
+                House Rules & Guidelines (comma separated):
+              </label>
+              <input
+                type="text"
+                value={rulesInput}
+                onChange={(e) => setRulesInput(e.target.value)}
+                placeholder="e.g. No smoking indoors, Quiet hours after 10 PM, Pets allowed"
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          )}
         </div>
 
         {/* Publish Action */}

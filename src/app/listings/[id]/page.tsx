@@ -303,46 +303,52 @@ export default function ListingDetailPage() {
             </div>
             <div className="text-xs text-slate-700 space-y-1">
               <h4 className="font-bold text-slate-900 text-sm">
-                Protected Location & Exact Address
+                {listing.category === "travel_buddy" ? "Protected Meeting Spot Details" : "Protected Location & Exact Address"}
               </h4>
               <p>
                 <strong>Public Hint:</strong> {listing.addressHint}
               </p>
               <p className="text-slate-500">
-                To guarantee safety, prevent stalking, and protect platform reservations, the exact street address and host phone number are revealed immediately after a confirmed booking pass is issued.
+                {listing.category === "travel_buddy"
+                  ? "To prevent stalking and ensure a secure experience, exact meeting coordinates and host contact details are revealed immediately after joining."
+                  : "To guarantee safety, prevent stalking, and protect platform reservations, the exact street address and host phone number are revealed immediately after a confirmed booking pass is issued."}
               </p>
             </div>
           </div>
 
-          {/* Amenities & Perks */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-            <h3 className="text-lg font-black text-slate-900">
-              What&apos;s Included & Amenities
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {listing.amenities.map((amenity, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>{amenity}</span>
-                </div>
-              ))}
+          {/* Amenities & Perks / Meetup Highlights */}
+          {listing.amenities && listing.amenities.length > 0 && (
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+              <h3 className="text-lg font-black text-slate-900">
+                {listing.category === "travel_buddy" ? "Meetup Activities & Vibe" : "What's Included & Amenities"}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {listing.amenities.map((amenity, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{amenity}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* House Rules & Guidelines */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-            <h3 className="text-lg font-black text-slate-900">
-              Host Guidelines & Rules
-            </h3>
-            <ul className="space-y-2.5">
-              {listing.rules.map((rule, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-xs text-slate-600">
-                  <Info className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-                  <span>{rule}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* House Rules & Guidelines - Only shown for Stays and Parties */}
+          {listing.category !== "travel_buddy" && listing.rules && listing.rules.length > 0 && (
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+              <h3 className="text-lg font-black text-slate-900">
+                Host Guidelines & Rules
+              </h3>
+              <ul className="space-y-2.5">
+                {listing.rules.map((rule, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-xs text-slate-600">
+                    <Info className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+                    <span>{rule}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Community Reviews & Ratings Section */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-6">
