@@ -12,7 +12,8 @@ import {
   AlertTriangle, 
   CheckCheck, 
   ArrowRight,
-  Search
+  Search,
+  MessageSquare
 } from "lucide-react";
 
 export default function MessagesPage() {
@@ -69,6 +70,38 @@ export default function MessagesPage() {
       setTimeout(() => setActionNotice(null), 5000);
     }
   };
+
+  if (!currentUser) {
+    return (
+      <div className="max-w-md mx-auto py-20 px-4 text-center space-y-5 animate-in fade-in">
+        <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+          <MessageSquare className="w-8 h-8" />
+        </div>
+        <div className="space-y-1.5">
+          <h2 className="text-xl font-black text-slate-900 tracking-tight">
+            Sign In to View Messages
+          </h2>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Your conversations with hosts, booking inquiries, and meetup details will appear here once you log in.
+          </p>
+        </div>
+        <button
+          onClick={() => openAuthModal("Sign in to view your conversations and inquiries.")}
+          className="w-full py-3 px-5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
+        >
+          Sign In / Create Account
+        </button>
+        <div>
+          <Link
+            href="/"
+            className="inline-block text-xs font-semibold text-slate-400 hover:text-slate-600 transition"
+          >
+            ← Return to Explore
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

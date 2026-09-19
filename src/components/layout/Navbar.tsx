@@ -104,22 +104,24 @@ export function Navbar() {
               <span>Explore</span>
             </Link>
 
-            <Link
-              href="/messages"
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors relative ${
-                pathname.startsWith("/messages")
-                  ? "text-indigo-600 bg-indigo-50/70" 
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              }`}
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>Messages</span>
-              {totalUnread > 0 && (
-                <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center -ml-0.5">
-                  {totalUnread}
-                </span>
-              )}
-            </Link>
+            {currentUser && (
+              <Link
+                href="/messages"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors relative ${
+                  pathname.startsWith("/messages")
+                    ? "text-indigo-600 bg-indigo-50/70" 
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Messages</span>
+                {totalUnread > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center -ml-0.5">
+                    {totalUnread}
+                  </span>
+                )}
+              </Link>
+            )}
 
             <Link
               href="/host/create"
@@ -284,14 +286,16 @@ export function Navbar() {
           >
             Explore Listings
           </Link>
-          <Link
-            href="/messages"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            <span>Messages</span>
-            {totalUnread > 0 && <span className="bg-rose-500 text-white text-xs px-2 py-0.5 rounded-full">{totalUnread}</span>}
-          </Link>
+          {currentUser && (
+            <Link
+              href="/messages"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <span>Messages</span>
+              {totalUnread > 0 && <span className="bg-rose-500 text-white text-xs px-2 py-0.5 rounded-full">{totalUnread}</span>}
+            </Link>
+          )}
           <Link
             href="/host/create"
             onClick={() => setMobileMenuOpen(false)}
