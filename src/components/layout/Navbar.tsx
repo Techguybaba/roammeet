@@ -14,25 +14,34 @@ import {
   Menu,
   X,
   LogIn,
-  LogOut
+  LogOut,
+  Calendar,
+  Home
 } from "lucide-react";
 
 export function Navbar() {
   const pathname = usePathname();
   const { 
     currentUser, 
-    openAuthModal,
+    openAuthModal, 
     logout,
     activeRole, 
     toggleRole, 
     currency, 
     setCurrency, 
-    conversations 
+    conversations,
+    bookingRequests
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const totalUnread = conversations.reduce((acc, c) => acc + c.unreadCount, 0);
+  const userTripsCount = currentUser 
+    ? bookingRequests.filter(b => b.applicantId === currentUser.id || b.applicantId === "user-rohit-01").length 
+    : 0;
+  const hostPendingCount = currentUser 
+    ? bookingRequests.filter(b => (b.hostId === currentUser.id || b.hostId === "user-rohit-01") && b.status === "pending").length 
+    : 0;
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-xs">
@@ -105,22 +114,58 @@ export function Navbar() {
             </Link>
 
             {currentUser && (
-              <Link
-                href="/messages"
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors relative ${
-                  pathname.startsWith("/messages")
-                    ? "text-indigo-600 bg-indigo-50/70" 
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                }`}
-              >
-                <MessageSquare className="w-4 h-4" />
-                <span>Messages</span>
-                {totalUnread > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center -ml-0.5">
-                    {totalUnread}
-                  </span>
-                )}
-              </Link>
+              <>
+                <Link
+                  href="/trips"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors relative ${
+                    pathname.startsWith("/trips")
+                      ? "text-indigo-600 bg-indigo-50/70" 
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  }`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>My Trips</span>
+                  {userTripsCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center -ml-0.5">
+                      {userTripsCount}
+                    </span>
+                  )}
+                </Link>
+
+                <Link
+                  href="/host/dashboard"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors relative ${
+                    pathname.startsWith("/host/dashboard")
+                      ? "text-purple-700 bg-purple-50" 
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  }`}
+                >
+                  <Home className="w-4 h-4 text-purple-600" />
+                  <span>Host Hub</span>
+                  {hostPendingCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center -ml-0.5">
+                      {hostPendingCount}
+                    </span>
+                  )}
+                </Link>
+
+                <Link
+                  href="/messages"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors relative ${
+                    pathname.startsWith("/messages")
+                      ? "text-indigo-600 bg-indigo-50/70" 
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  }`}
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Messages</span>
+                  {totalUnread > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center -ml-0.5">
+                      {totalUnread}
+                    </span>
+                  )}
+                </Link>
+              </>
             )}
 
             <Link
@@ -287,14 +332,32 @@ export function Navbar() {
             Explore Listings
           </Link>
           {currentUser && (
-            <Link
-              href="/messages"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <span>Messages</span>
-              {totalUnread > 0 && <span className="bg-rose-500 text-white text-xs px-2 py-0.5 rounded-full">{totalUnread}</span>}
-            </Link>
+            <>
+              <Link
+                href="/trips"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <span>My Trips</span>
+                {userTripsCount > 0 && <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold">{userTripsCount}</span>}
+              </Link>
+              <Link
+                href="/host/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-purple-700 hover:bg-purple-50"
+              >
+                <span>Host Hub</span>
+                {hostPendingCount > 0 && <span className="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">{hostPendingCount}</span>}
+              </Link>
+              <Link
+                href="/messages"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <span>Messages</span>
+                {totalUnread > 0 && <span className="bg-rose-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">{totalUnread}</span>}
+              </Link>
+            </>
           )}
           <Link
             href="/host/create"

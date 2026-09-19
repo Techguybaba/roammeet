@@ -15,7 +15,8 @@ import {
   CheckCircle2, 
   ArrowLeft, 
   Info, 
-  Share2
+  Share2,
+  Home
 } from "lucide-react";
 
 export default function ListingDetailPage() {
@@ -412,6 +413,14 @@ export default function ListingDetailPage() {
                   </button>
 
                   <Link
+                    href="/host/dashboard"
+                    className="w-full py-2.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2"
+                  >
+                    <Home className="w-4 h-4 text-purple-600" />
+                    <span>Manage in Host Hub</span>
+                  </Link>
+
+                  <Link
                     href="/messages"
                     className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2"
                   >
@@ -471,14 +480,24 @@ export default function ListingDetailPage() {
                       Request Submitted!
                     </h4>
                     <p className="text-xs text-emerald-700">
-                      Host {listing.host.name} has been notified. You can track this in your messages or chat directly.
+                      Host {listing.host.name} has been notified. You can track this in your trips or chat directly.
                     </p>
-                    <button
-                      onClick={handleStartChat}
-                      className="mt-2 w-full py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition"
-                    >
-                      Open Chat with Host
-                    </button>
+                    <div className="flex flex-col gap-2 mt-2">
+                      <Link
+                        href="/trips"
+                        className="w-full py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition flex items-center justify-center gap-1.5"
+                      >
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>View in My Trips</span>
+                      </Link>
+                      <button
+                        onClick={handleStartChat}
+                        className="w-full py-2 bg-white border border-emerald-300 text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-50 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Open Chat with Host</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <form onSubmit={handleBookingSubmit} className="space-y-4">

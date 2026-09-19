@@ -312,6 +312,128 @@ export async function saveBookingToCloud(booking: BookingRequest) {
   }
 }
 
+interface DbBookingItem {
+  id: string;
+  listing_id: string;
+  listing_title: string;
+  category: "stay" | "travel_buddy" | "party" | "activity";
+  applicant_id: string;
+  host_id: string;
+  status: "pending" | "accepted" | "declined" | "completed";
+  dates: string;
+  total_amount: number;
+  platform_fee: number;
+  message: string;
+  contact_unlocked: boolean;
+  created_at?: string;
+  profiles?: {
+    id: string;
+    name: string;
+    email?: string;
+    avatar_url?: string;
+    bio?: string;
+    city?: string;
+    country?: string;
+    is_host?: boolean;
+    verification_tier?: 0 | 1 | 2 | 3 | 4;
+    verification_badge?: string;
+  };
+}
+
+/**
+ * Fetch all bookings from Supabase Cloud
+ */
+export async function fetchCloudBookings(): Promise<BookingRequest[] | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from("bookings")
+      .select("*, profiles(*)")
+      .order("created_at", { ascending: false });
+
+    if (error || !data) return null;
+
+    const items = data as unknown as DbBookingItem[];
+    return items.map((item) => {
+      const applicantData = item.profiles;
+      const applicantUser: AppUser = applicantData ? {
+        id: applicantData.id,
+        name: applicantData.name,
+        email: applicantData.email || "",
+        avatar: applicantData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(applicantData.name)}`,
+        bio: applicantData.bio || "Traveler on RoamMeet",
+        city: applicantData.city || "Mumbai",
+        country: applicantData.country || "India",
+        isHost: Boolean(applicantData.is_host),
+        verificationTier: applicantData.verification_tier ?? 1,
+        verificationBadge: applicantData.verification_badge || "Email Verified",
+        phoneVerified: false,
+        selfieVerified: false,
+        idVerified: false,
+        rating: 5.0,
+        reviewCount: 0,
+        joinedDate: "Member"
+      } : (MOCK_USERS[item.applicant_id] || CURRENT_USER);
+
+      return {
+        id: item.id,
+        listingId: item.listing_id,
+        listingTitle: item.listing_title,
+        category: item.category,
+        applicantId: item.applicant_id,
+        applicant: applicantUser,
+        hostId: item.host_id,
+        status: item.status,
+        dates: item.dates,
+        totalAmount: Number(item.total_amount) || 0,
+        platformFee: Number(item.platform_fee) || 0,
+        message: item.message,
+        createdAt: item.created_at ? new Date(item.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Recently",
+        contactUnlocked: Boolean(item.contact_unlocked)
+      };
+    });
+  } catch (err) {
+    console.error("Failed to fetch cloud bookings:", err);
+    return null;
+  }
+}
+
+/**
+ * Update booking status in Supabase Cloud
+ */
+export async function updateCloudBookingStatus(
+  bookingId: string, 
+  status: "accepted" | "declined" | "completed", 
+  contactUnlocked: boolean
+) {
+  if (!supabase) return;
+  try {
+    await supabase.from("bookings").update({
+      status,
+      contact_unlocked: contactUnlocked
+    }).eq("id", bookingId);
+  } catch (err) {
+    console.error("Failed to update booking status in cloud:", err);
+  }
+}
+
+/**
+ * Update listing status in Supabase Cloud
+ */
+export async function updateCloudListingStatus(
+  listingId: string, 
+  status: "active" | "filled" | "completed" | "cancelled"
+) {
+  if (!supabase) return;
+  try {
+    await supabase.from("listings").update({
+      status
+    }).eq("id", listingId);
+  } catch (err) {
+    console.error("Failed to update listing status in cloud:", err);
+  }
+}
+
 /**
  * Save chat message to Supabase Cloud
  */

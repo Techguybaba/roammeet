@@ -26,6 +26,9 @@ import {
   fetchCloudListings,
   saveListingToCloud,
   saveBookingToCloud,
+  fetchCloudBookings,
+  updateCloudBookingStatus,
+  updateCloudListingStatus,
   saveMessageToCloud,
   subscribeToRealtimeMessages
 } from "@/lib/supabase";
@@ -48,6 +51,7 @@ interface AppContextType {
   setCurrency: (curr: "USD" | "INR") => void;
   listings: Listing[];
   addListing: (listing: Omit<Listing, "id" | "hostId" | "host" | "currentParticipants" | "status">) => Listing;
+  toggleListingStatus: (listingId: string) => void;
   conversations: Conversation[];
   activeConversationId: string | null;
   setActiveConversationId: (id: string | null) => void;
@@ -230,11 +234,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // 1. Fetch live listings from Supabase cloud
+  // 1. Fetch live listings and bookings from Supabase cloud
   useEffect(() => {
     fetchCloudListings().then((cloudListings) => {
       if (cloudListings && cloudListings.length > 0) {
         setListings(cloudListings);
+      }
+    });
+
+    fetchCloudBookings().then((cloudBookings) => {
+      if (cloudBookings && cloudBookings.length > 0) {
+        setBookingRequests(cloudBookings);
       }
     });
   }, []);
@@ -422,12 +432,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const respondToBookingRequest = (requestId: string, status: "accepted" | "declined") => {
+    const contactUnlocked = status === "accepted";
     setBookingRequests(prev =>
       prev.map(r =>
         r.id === requestId
-          ? { ...r, status, contactUnlocked: status === "accepted" }
+          ? { ...r, status, contactUnlocked }
           : r
       )
+    );
+    updateCloudBookingStatus(requestId, status, contactUnlocked);
+  };
+
+  const toggleListingStatus = (listingId: string) => {
+    setListings(prev =>
+      prev.map(l => {
+        if (l.id === listingId) {
+          const newStatus = l.status === "active" ? "cancelled" : "active";
+          updateCloudListingStatus(listingId, newStatus);
+          return { ...l, status: newStatus };
+        }
+        return l;
+      })
     );
   };
 
@@ -500,6 +525,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setCurrency,
         listings,
         addListing,
+        toggleListingStatus,
         conversations,
         activeConversationId,
         setActiveConversationId,
